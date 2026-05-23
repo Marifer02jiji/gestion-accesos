@@ -1,0 +1,103 @@
+<x-app-layout>
+    <x-slot name="header">
+        Mis Solicitudes
+    </x-slot>
+
+    <div>
+        {{-- Alertas --}}
+        @if(session('success'))
+            <div class="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded mb-4 flex items-center gap-2">
+                <i class="fas fa-check-circle"></i> {{ session('success') }}
+            </div>
+        @endif
+
+        @if(session('error'))
+            <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4 flex items-center gap-2">
+                <i class="fas fa-exclamation-circle"></i> {{ session('error') }}
+            </div>
+        @endif
+
+        <div class="bg-white shadow-sm rounded-lg p-6">
+
+            {{-- Barra superior --}}
+            <div class="flex justify-between items-center mb-6">
+                <h3 class="text-lg font-heading font-semibold text-omg-slate flex items-center gap-2">
+                    <i class="fas fa-list text-omg-nile"></i>
+                    Lista de Solicitudes
+                </h3>
+                <a href="{{ route('solicitudes.create') }}"
+                   class="bg-omg-coral text-white px-4 py-2 rounded hover:opacity-90 font-heading font-semibold flex items-center gap-2">
+                    <i class="fas fa-plus"></i> Nueva Solicitud
+                </a>
+            </div>
+
+            {{-- Tabla --}}
+            <table class="w-full text-sm text-left border">
+                <thead class="bg-omg-nile text-white">
+                    <tr>
+                        <th class="px-4 py-2">#</th>
+                        <th class="px-4 py-2">Fecha</th>
+                        <th class="px-4 py-2">Lugar</th>
+                        <th class="px-4 py-2">Motivo</th>
+                        <th class="px-4 py-2">Estado</th>
+                        <th class="px-4 py-2">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @forelse($solicitudes as $s)
+                    <tr class="hover:bg-omg-chardon border-b">
+                        <td class="px-4 py-2">{{ $s->id_solicitud }}</td>
+                        <td class="px-4 py-2">{{ $s->fecha_inicio }}</td>
+                        <td class="px-4 py-2">{{ $s->lugar_encuentro }}</td>
+                        <td class="px-4 py-2">{{ $s->motivo_visita }}</td>
+                        <td class="px-4 py-2">
+                            <span class="px-2 py-1 rounded-full text-white text-xs font-semibold
+                                @if($s->estado->nombre == 'Pendiente') bg-yellow-500
+                                @elseif($s->estado->nombre == 'Autorizada') bg-green-500
+                                @elseif($s->estado->nombre == 'Cancelada') bg-gray-500
+                                @else bg-red-500 @endif">
+                                {{ $s->estado->nombre }}
+                            </span>
+                        </td>
+                        <td class="px-4 py-2">
+                            <div class="flex gap-2">
+                                <a href="{{ route('solicitudes.show', $s->id_solicitud) }}"
+                                   class="bg-omg-nile text-white px-3 py-1 rounded hover:opacity-90 text-xs flex items-center gap-1">
+                                    <i class="fas fa-eye"></i> Ver
+                                </a>
+                                @if(in_array($s->estado->nombre, ['Cancelada', 'Rechazada']))
+                                    <form action="{{ route('solicitudes.destroy', $s->id_solicitud) }}" method="POST"
+                                        onsubmit="return confirm('¿Estás seguro de eliminar esta solicitud?')">
+                                        @csrf
+                                        @method('DELETE')
+                                        <button type="submit"
+                                            class="bg-red-600 text-white px-3 py-1 rounded hover:opacity-90 text-xs flex items-center gap-1">
+                                            <i class="fas fa-trash"></i> Eliminar
+                                        </button>
+                                    </form>
+                                @endif
+                            </div>
+                        </td>
+                    </tr>
+                    @empty
+                    <tr>
+                        <td colspan="6" class="text-center px-4 py-8">
+                            <div class="flex flex-col items-center gap-2 text-gray-400">
+                                <i class="fas fa-folder-open text-4xl"></i>
+                                <p class="font-semibold">No se encontraron registros</p>
+                                <p class="text-sm">Crea tu primera solicitud usando el botón "Nueva Solicitud"</p>
+                            </div>
+                        </td>
+                    </tr>
+                    @endforelse
+                </tbody>
+            </table>
+
+            {{-- Paginación --}}
+            <div class="mt-4">
+                {{ $solicitudes->links() }}
+            </div>
+
+        </div>
+    </div>
+</x-app-layout>
