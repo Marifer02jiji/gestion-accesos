@@ -28,13 +28,25 @@ class LoginRequest extends FormRequest
     {
         $this->ensureIsNotRateLimited();
 
+        // Obtener input
+        $usuarioInput = $this->usuario;
+
+        // Si escribieron correo institucional,
+        // quitar el dominio para buscar en SAM
+        if (str_contains($usuarioInput, '@toluca.tecnm.mx')) {
+            $usuarioInput = str_replace('@toluca.tecnm.mx', '', $usuarioInput);
+        }
+
         // Buscar empleado en SAM
-        $empleado = \App\Models\Empleado::where('usuario', $this->usuario)
+        $empleado = \App\Models\Empleado::where('usuario', $usuarioInput)
             ->where('estatus', 'Activo')
             ->first();
 
+        // Validar usuario y contraseña
         if (!$empleado || $empleado->password !== hash('sha256', $this->password)) {
+
             RateLimiter::hit($this->throttleKey());
+
             throw ValidationException::withMessages([
                 'usuario' => __('Las credenciales no coinciden con nuestros registros.'),
             ]);
@@ -42,10 +54,12 @@ class LoginRequest extends FormRequest
 
         // Buscar o crear usuario en gestion_accesos_db
         $user = \App\Models\User::firstOrCreate(
-            ['email' => $empleado->usuario . '@sam.local'],
+            [
+                'email' => $empleado->usuario . '@toluca.tecnm.mx'
+            ],
             [
                 'name'            => $empleado->nombre . ' ' . $empleado->apellidoPa,
-                'email'           => $empleado->usuario . '@sam.local',
+                'email'           => $empleado->usuario . '@toluca.tecnm.mx',
                 'password'        => bcrypt($this->password),
                 'id_empleado_sam' => $empleado->id_empleado,
             ]
@@ -53,18 +67,25 @@ class LoginRequest extends FormRequest
 
         // Actualizar id_empleado_sam si no lo tenía
         if (!$user->id_empleado_sam) {
-            $user->update(['id_empleado_sam' => $empleado->id_empleado]);
+            $user->update([
+                'id_empleado_sam' => $empleado->id_empleado
+            ]);
         }
 
-        // Asignar rol según credenciales del SAM (solo si no tiene rol)
+        // Asignar rol según credenciales del SAM
         if ($user->roles->isEmpty()) {
+
             $rol = match($empleado->credenciales) {
+
                 'Administrador master' => 'autorizador',
-                default               => 'solicitante',
+
+                default => 'solicitante',
             };
+
             $user->assignRole($rol);
         }
 
+        // Login
         Auth::login($user, $this->boolean('remember'));
 
         RateLimiter::clear($this->throttleKey());
@@ -90,6 +111,8 @@ class LoginRequest extends FormRequest
 
     public function throttleKey(): string
     {
-        return Str::transliterate(Str::lower($this->string('usuario')) . '|' . $this->ip());
+        return Str::transliterate(
+            Str::lower($this->string('usuario')) . '|' . $this->ip()
+        );
     }
 }
