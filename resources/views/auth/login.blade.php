@@ -57,8 +57,7 @@
                     class="w-full bg-omg-coral text-white py-2 rounded-lg font-heading font-semibold hover:opacity-90 transition flex items-center justify-center gap-2">
                     <i class="fas fa-sign-in-alt"></i> Iniciar Sesión
                 </button>
-
-                {{-- Acceso para vigilantes --}}
+                
                 <div class="mt-5 pt-4 border-t border-gray-100 text-center">
                     <p class="text-xs text-omg-kashmir mb-2">¿Eres vigilante?</p>
                     <a href="{{ route('vigilante.index') }}"
@@ -66,7 +65,7 @@
                         <i class="fas fa-shield-alt text-omg-coral"></i> Acceso para Vigilantes
                     </a>
                 </div>
-
+                
             </form>
         </div>
 

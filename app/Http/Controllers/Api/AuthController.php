@@ -77,7 +77,7 @@ class AuthController extends Controller
         }
 
         // Generar token
-        $token = $user->createToken('flutter-token')->plainTextToken;
+        /*$token = $user->createToken('flutter-token')->plainTextToken;
 
         return response()->json([
             'message' => 'Inicio de sesión exitoso.',
@@ -93,7 +93,25 @@ class AuthController extends Controller
                     'credenciales'    => $empleado->credenciales,
                 ],
             ],
+        ]);*/
+
+        // Generar token
+        $token = $user->createToken('flutter-token')->plainTextToken;
+
+        // Extraer el primer rol asignado de la colección
+        $rolAsignado = $user->getRoleNames()->first() ?? 'solicitante';
+
+        return response()->json([
+            'message' => 'Inicio de sesión exitoso.',
+            'data'    => [
+                'token' => $token,
+                'id'    => $user->id,
+                'name'  => $empleado->usuario ?? $user->name,
+                'email' => $user->email,
+                'rol'   => $rolAsignado, 
+            ],
         ]);
+    }
     }
 
     public function logout(Request $request)
