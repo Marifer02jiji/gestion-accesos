@@ -125,7 +125,7 @@
                     @php
                         $registro = \App\Models\RegistroAcceso::whereHas('qr.solicitudVisitante.solicitud', function($q) use ($visita) {
                             $q->where('id_solicitud', $visita->id_solicitud);
-                        })->latest()->first();
+                        })->orderBy('id_registro', 'desc')->first();
                     @endphp
                     @if($registro && $registro->hora_llegada_institucion && !$registro->hora_salida_institucion)
                         <span class="bg-blue-100 text-blue-700 text-xs font-semibold px-2 py-1 rounded-full flex items-center gap-1 flex-shrink-0">

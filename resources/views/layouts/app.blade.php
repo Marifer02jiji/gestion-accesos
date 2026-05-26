@@ -22,55 +22,80 @@
                         {{-- Logo --}}
                         <div class="flex items-center gap-3">
                             <i class="fas fa-shield-alt text-omg-coral text-xl"></i>
-                            <a href="{{ route('dashboard') }}"
-                               class="text-white font-heading font-bold text-xl hover:opacity-90">
-                                Gestión de Accesos
-                            </a>
+                            @if(Auth::check())
+                                <a href="{{ route('dashboard') }}"
+                                   class="text-white font-heading font-bold text-xl hover:opacity-90">
+                                    Gestión de Accesos
+                                </a>
+                            @else
+                                <span class="text-white font-heading font-bold text-xl">
+                                    Gestión de Accesos
+                                </span>
+                            @endif
                         </div>
 
                         {{-- Opciones --}}
                         <div class="flex items-center gap-3">
 
-                            {{-- Nombre --}}
-                            <div class="flex items-center gap-2 border border-omg-kashmir rounded-full px-4 py-1">
-                                <i class="fas fa-user-circle text-omg-kashmir"></i>
-                                <span class="text-white text-sm font-semibold">
-                                    {{ Auth::user()->name ?? '' }}
-                                </span>
-                            </div>
-
-                            {{-- Separador --}}
-                            <div class="h-6 w-px bg-omg-kashmir opacity-50"></div>
-
-                            {{-- Inicio --}}
-                            <a href="{{ route('dashboard') }}"
-                               class="border border-omg-kashmir text-white px-3 py-1 rounded-lg hover:bg-omg-kashmir hover:text-omg-nile transition text-sm flex items-center gap-1">
-                                <i class="fas fa-home"></i> Inicio
-                            </a>
-
-                            {{-- Notificaciones con badge --}}
-                            @php
-                                $notifNoLeidas = \App\Models\Notificacion::where('id_empleado', Auth::id())
-                                    ->where('leida', false)->count();
-                            @endphp
-                            <a href="{{ route('notificaciones.index') }}"
-                               class="relative border border-omg-kashmir text-white px-3 py-1 rounded-lg hover:bg-omg-kashmir hover:text-omg-nile transition text-sm flex items-center gap-1">
-                                <i class="fas fa-bell"></i> Notificaciones
-                                @if($notifNoLeidas > 0)
-                                    <span class="absolute -top-2 -right-2 bg-red-500 text-white text-xs font-bold w-5 h-5 rounded-full flex items-center justify-center">
-                                        {{ $notifNoLeidas > 9 ? '9+' : $notifNoLeidas }}
+                            @if(Auth::check())
+                                {{-- Usuario autenticado --}}
+                                <div class="flex items-center gap-2 border border-omg-kashmir rounded-full px-4 py-1">
+                                    <i class="fas fa-user-circle text-omg-kashmir"></i>
+                                    <span class="text-white text-sm font-semibold">
+                                        {{ Auth::user()->name ?? '' }}
                                     </span>
-                                @endif
-                            </a>
+                                </div>
 
-                            {{-- Cerrar sesión --}}
-                            <form method="POST" action="{{ route('logout') }}" id="logout-form">
-                                @csrf
-                                <button type="submit"
-                                    class="bg-omg-coral text-white px-3 py-1 rounded-lg hover:opacity-90 transition text-sm flex items-center gap-1">
-                                    <i class="fas fa-sign-out-alt"></i> Cerrar sesión
-                                </button>
-                            </form>
+                                <div class="h-6 w-px bg-omg-kashmir opacity-50"></div>
+
+                                <a href="{{ route('dashboard') }}"
+                                   class="border border-omg-kashmir text-white px-3 py-1 rounded-lg hover:bg-omg-kashmir hover:text-omg-nile transition text-sm flex items-center gap-1">
+                                    <i class="fas fa-home"></i> Inicio
+                                </a>
+
+                                @php
+                                    $notifNoLeidas = \App\Models\Notificacion::where('id_empleado', Auth::user()->idSam())
+                                        ->where('leida', false)->count();
+                                @endphp
+                                <a href="{{ route('notificaciones.index') }}"
+                                   class="relative border border-omg-kashmir text-white px-3 py-1 rounded-lg hover:bg-omg-kashmir hover:text-omg-nile transition text-sm flex items-center gap-1">
+                                    <i class="fas fa-bell"></i> Notificaciones
+                                    @if($notifNoLeidas > 0)
+                                        <span class="absolute -top-2 -right-2 bg-red-500 text-white text-xs font-bold w-5 h-5 rounded-full flex items-center justify-center">
+                                            {{ $notifNoLeidas > 9 ? '9+' : $notifNoLeidas }}
+                                        </span>
+                                    @endif
+                                </a>
+
+                                <form method="POST" action="{{ route('logout') }}" id="logout-form">
+                                    @csrf
+                                    <button type="submit"
+                                        class="bg-omg-coral text-white px-3 py-1 rounded-lg hover:opacity-90 transition text-sm flex items-center gap-1">
+                                        <i class="fas fa-sign-out-alt"></i> Cerrar sesión
+                                    </button>
+                                </form>
+
+                            @else
+                                {{-- Vigilante sin login --}}
+                                <div class="flex items-center gap-2 border border-omg-kashmir rounded-full px-4 py-1">
+                                    <i class="fas fa-user-shield text-omg-kashmir"></i>
+                                    <span class="text-white text-sm font-semibold">
+                                        {{ session('vigilante_area', 'Vigilante') }}
+                                    </span>
+                                </div>
+
+                                <div class="h-6 w-px bg-omg-kashmir opacity-50"></div>
+
+                                <a href="{{ route('vigilante.historial') }}"
+                                   class="border border-omg-kashmir text-white px-3 py-1 rounded-lg hover:bg-omg-kashmir hover:text-omg-nile transition text-sm flex items-center gap-1">
+                                    <i class="fas fa-history"></i> Historial
+                                </a>
+
+                                <a href="{{ route('vigilante.salirSesion') }}"
+                                   class="bg-omg-coral text-white px-3 py-1 rounded-lg hover:opacity-90 transition text-sm flex items-center gap-1">
+                                    <i class="fas fa-sign-out-alt"></i> Salir
+                                </a>
+                            @endif
 
                         </div>
                     </div>
@@ -85,16 +110,15 @@
                             <h1 class="text-white font-heading font-bold text-xl flex items-center gap-2">
                                 {{ $header }}
                             </h1>
-                            {{-- Etiqueta de rol -- sin apariencia de botón --}}
-                            @if(Auth::user()->hasRole('solicitante'))
+                            @if(Auth::check() && Auth::user()->hasRole('solicitante'))
                                 <span class="text-omg-chardon text-xs flex items-center gap-1 opacity-80">
                                     <i class="fas fa-user"></i> Solicitante
                                 </span>
-                            @elseif(Auth::user()->hasRole('autorizador'))
+                            @elseif(Auth::check() && Auth::user()->hasRole('autorizador'))
                                 <span class="text-omg-chardon text-xs flex items-center gap-1 opacity-80">
                                     <i class="fas fa-clipboard-check"></i> Autorizador
                                 </span>
-                            @elseif(Auth::user()->hasRole('vigilante'))
+                            @elseif(!Auth::check())
                                 <span class="text-omg-chardon text-xs flex items-center gap-1 opacity-80">
                                     <i class="fas fa-shield-alt"></i> Vigilante
                                 </span>
@@ -104,7 +128,8 @@
                 </header>
             @endisset
 
-            {{-- Modal de advertencia de inactividad --}}
+            {{-- Modal de advertencia de inactividad (solo usuarios autenticados) --}}
+            @if(Auth::check())
             <div id="modal-inactividad" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
                 <div class="bg-white rounded-xl shadow-xl p-8 max-w-sm w-full text-center">
                     <div class="bg-yellow-100 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
@@ -120,6 +145,7 @@
                     </button>
                 </div>
             </div>
+            @endif
 
             {{-- Page Content --}}
             <main class="py-8 flex-1">
@@ -136,10 +162,11 @@
 
         </div>
 
-        {{-- Script de inactividad --}}
+        {{-- Script de inactividad (solo usuarios autenticados) --}}
+        @if(Auth::check())
         <script>
-            const MINUTOS_INACTIVIDAD = 15;   // Muestra aviso a los 15 min
-            const SEGUNDOS_ADVERTENCIA = 60;   // Da 60 seg para responder
+            const MINUTOS_INACTIVIDAD = 15;
+            const SEGUNDOS_ADVERTENCIA = 60;
 
             let timerInactividad;
             let timerCuentaRegresiva;
@@ -167,7 +194,6 @@
                 timerInactividad = setTimeout(mostrarAviso, MINUTOS_INACTIVIDAD * 60 * 1000);
             }
 
-            // Detectar actividad del usuario
             ['mousemove', 'keydown', 'click', 'scroll', 'touchstart'].forEach(evento => {
                 document.addEventListener(evento, () => {
                     if (modal.classList.contains('hidden')) {
@@ -176,9 +202,9 @@
                 });
             });
 
-            // Iniciar el timer al cargar
             reiniciarTimer();
         </script>
+        @endif
 
         @livewireScripts
     </body>

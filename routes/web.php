@@ -37,17 +37,15 @@ Route::middleware(['auth', 'role:autorizador'])->group(function () {
     Route::post('/autorizador/{id}/rechazar', [AutorizadorController::class, 'rechazar'])->name('autorizador.rechazar');
 });
 
-// Rutas Vigilante
-Route::middleware(['auth', 'role:vigilante'])->group(function () {
-    Route::get('/vigilante', [VigilanteController::class, 'index'])->name('vigilante.index');
-    Route::post('/vigilante/escanear', [VigilanteController::class, 'escanear'])->name('vigilante.escanear');
-    Route::post('/vigilante/entrada', [VigilanteController::class, 'registrarEntrada'])->name('vigilante.entrada');
-    Route::post('/vigilante/salida', [VigilanteController::class, 'registrarSalida'])->name('vigilante.salida');
-    Route::get('/vigilante/historial', [VigilanteController::class, 'historial'])->name('vigilante.historial');
-    Route::post('/vigilante/identificar', [VigilanteController::class, 'identificar'])->name('vigilante.identificar');
-    Route::get('/vigilante/salir-sesion', [VigilanteController::class, 'salirSesion'])->name('vigilante.salirSesion');
-
-
+// Rutas Vigilante — sin login requerido
+Route::prefix('vigilante')->group(function () {
+    Route::get('/', [VigilanteController::class, 'index'])->name('vigilante.index');
+    Route::post('/identificar', [VigilanteController::class, 'identificar'])->name('vigilante.identificar');
+    Route::get('/salir-sesion', [VigilanteController::class, 'salirSesion'])->name('vigilante.salirSesion');
+    Route::post('/escanear', [VigilanteController::class, 'escanear'])->name('vigilante.escanear');
+    Route::post('/entrada', [VigilanteController::class, 'registrarEntrada'])->name('vigilante.entrada');
+    Route::post('/salida', [VigilanteController::class, 'registrarSalida'])->name('vigilante.salida');
+    Route::get('/historial', [VigilanteController::class, 'historial'])->name('vigilante.historial');
 });
 
 Route::middleware('auth')->group(function () {

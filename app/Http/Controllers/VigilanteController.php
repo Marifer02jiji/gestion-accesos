@@ -9,7 +9,6 @@ use Illuminate\Http\Request;
 
 class VigilanteController extends Controller
 {
-    // Guardar datos del vigilante en sesión
     public function identificar(Request $request)
     {
         $request->validate([
@@ -25,14 +24,12 @@ class VigilanteController extends Controller
         return redirect()->route('vigilante.index');
     }
 
-    // Cerrar sesión de vigilante
     public function salirSesion()
     {
         session()->forget(['vigilante_telefono', 'vigilante_area']);
         return redirect()->route('vigilante.index');
     }
 
-    // Vista principal
     public function index()
     {
         $visitasHoy = Solicitud::with(['visitantes', 'solicitudVisitantes.qr'])
@@ -43,7 +40,6 @@ class VigilanteController extends Controller
         return view('vigilante.index', compact('visitasHoy'));
     }
 
-    // Escanear QR
     public function escanear(Request $request)
     {
         $request->validate(['codigo_qr' => 'required|string']);
@@ -70,34 +66,32 @@ class VigilanteController extends Controller
         return view('vigilante.resultado', compact('qr'));
     }
 
-    // Registrar entrada
     public function registrarEntrada(Request $request)
     {
         $request->validate(['id_qr' => 'required|integer']);
 
         $qr = QR::findOrFail($request->id_qr);
 
-        $registro = RegistroAcceso::create([
+        RegistroAcceso::create([
             'hora_llegada_institucion' => now(),
             'id_qr'                    => $qr->id_qr,
             'telefono_vigilante'       => session('vigilante_telefono'),
             'area_vigilante'           => session('vigilante_area'),
         ]);
 
-        $qr->update(['id_estadoQr' => 3]); // Usado
+        $qr->update(['id_estadoQr' => 3]);
 
         return redirect()->route('vigilante.index')
             ->with('success', 'Entrada registrada correctamente.');
     }
 
-    // Registrar salida
     public function registrarSalida(Request $request)
     {
         $request->validate(['id_qr' => 'required|integer']);
 
         $registro = RegistroAcceso::where('id_qr', $request->id_qr)
             ->whereNull('hora_salida_institucion')
-            ->latest()
+            ->orderBy('id_registro', 'desc')
             ->first();
 
         if (!$registro) {
@@ -115,7 +109,6 @@ class VigilanteController extends Controller
             ->with('success', 'Salida registrada correctamente.');
     }
 
-    // Historial
     public function historial()
     {
         $registros = RegistroAcceso::with(['qr.solicitudVisitante.visitante'])
