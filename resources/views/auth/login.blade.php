@@ -58,13 +58,8 @@
                     <i class="fas fa-sign-in-alt"></i> Iniciar Sesión
                 </button>
                 
-                <div class="mt-5 pt-4 border-t border-gray-100 text-center">
-                    <p class="text-xs text-omg-kashmir mb-2">¿Eres vigilante?</p>
-                    <a href="{{ route('vigilante.index') }}"
-                       class="inline-flex items-center gap-2 bg-omg-chardon border border-omg-kashmir text-omg-nile px-4 py-2 rounded-lg text-sm font-semibold hover:bg-omg-nile hover:text-white transition">
-                        <i class="fas fa-shield-alt text-omg-coral"></i> Acceso para Vigilantes
-                    </a>
-                </div>
+ 
+                
                 
             </form>
         </div>
