@@ -20,7 +20,8 @@ class NotificacionController extends Controller
 {
     public function index()
     {
-        $notificaciones = Notificacion::where('id_empleado', Auth::id())
+                                                            /*Auth::id()*/
+        $notificaciones = Notificacion::where('id_empleado', Auth::user()->idSam())
             ->orderBy('fecha_creado', 'desc')
             ->paginate(10);
 
