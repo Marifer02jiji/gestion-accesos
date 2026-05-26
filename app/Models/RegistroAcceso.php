@@ -6,9 +6,9 @@ use Illuminate\Database\Eloquent\Model;
 
 class RegistroAcceso extends Model
 {
-    protected $table = 'RegistroAcceso';
+    protected $table      = 'RegistroAcceso';
     protected $primaryKey = 'id_registro';
-    public $timestamps = false;
+    public    $timestamps = false;
 
     protected $fillable = [
         'hora_llegada_institucion',
@@ -19,6 +19,8 @@ class RegistroAcceso extends Model
         'id_vigilante_entrada',
         'id_vigilante_salida',
         'id_qr',
+        'telefono_vigilante',
+        'area_vigilante',
     ];
 
     public function qr()

@@ -3,7 +3,6 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\StoreSolicitudRequest;
-use App\Models\CaMotivoVisita;
 use App\Models\CaTipoSolicitud;
 use App\Models\QR;
 use App\Models\Solicitud;
@@ -13,13 +12,13 @@ use Illuminate\Support\Facades\Auth;
 
 class SolicitudController extends Controller
 {
+    // Obtener ID del empleado SAM del usuario autenticado
     private function idEmpleado(): int
     {
         return Auth::user()->idSam();
     }
 
-    // ─── Listado ──────────────────────────────────────────────────
-
+    // Listado de solicitudes del solicitante
     public function index()
     {
         $solicitudes = Solicitud::where('id_solicitante', $this->idEmpleado())
@@ -30,24 +29,14 @@ class SolicitudController extends Controller
         return view('solicitudes.index', compact('solicitudes'));
     }
 
-    // ─── Formulario ───────────────────────────────────────────────
-
+    // Formulario de nueva solicitud
     public function create()
     {
-        $tipos   = CaTipoSolicitud::all();
-        $motivos = CaMotivoVisita::activos()->orderBy('nombre')->get();
-
-        // Si no carga el catálogo de motivos
-        if ($motivos->isEmpty()) {
-            return view('solicitudes.create', compact('tipos', 'motivos'))
-                ->with('error_motivos', 'No fue posible cargar los motivos de visita.');
-        }
-
-        return view('solicitudes.create', compact('tipos', 'motivos'));
+        $tipos = CaTipoSolicitud::all();
+        return view('solicitudes.create', compact('tipos'));
     }
 
-    // ─── Guardar ──────────────────────────────────────────────────
-
+    // Guardar nueva solicitud
     public function store(StoreSolicitudRequest $request)
     {
         $solicitud = Solicitud::create([
@@ -57,7 +46,7 @@ class SolicitudController extends Controller
             'motivo_visita'       => $request->motivo_visita,
             'id_tipo_solicitud'   => $request->id_tipo_solicitud,
             'tolerancia_antes'    => $request->tolerancia_antes,
-            'tolerancia_despues'  => $request->tolerancia_antes,
+            'tolerancia_despues'  => $request->tolerancia_despues,
             'numero_visitantes'   => count($request->visitante_correo),
             'id_estado_solicitud' => 1,
             'id_solicitante'      => $this->idEmpleado(),
@@ -82,8 +71,7 @@ class SolicitudController extends Controller
             ->with('success', "Solicitud creada correctamente. Folio: {$solicitud->folio}");
     }
 
-    // ─── Detalle ──────────────────────────────────────────────────
-
+    // Detalle de solicitud
     public function show($id)
     {
         $solicitud = Solicitud::with(['estado', 'tipo', 'visitantes', 'solicitudVisitantes.qr'])
@@ -92,8 +80,7 @@ class SolicitudController extends Controller
         return view('solicitudes.show', compact('solicitud'));
     }
 
-    // ─── Cancelar ─────────────────────────────────────────────────
-
+    // Cancelar solicitud e invalidar QRs
     public function cancelar($id)
     {
         $solicitud = Solicitud::with('solicitudVisitantes.qr')->findOrFail($id);
@@ -106,7 +93,7 @@ class SolicitudController extends Controller
         // Cancelar todos los QR activos asociados
         foreach ($solicitud->solicitudVisitantes as $sv) {
             if ($sv->qr && $sv->qr->id_estadoQr === 1) {
-                $sv->qr->update(['id_estadoQr' => 4]); // 4 = Cancelado
+                $sv->qr->update(['id_estadoQr' => 4]);
             }
         }
 
@@ -120,8 +107,7 @@ class SolicitudController extends Controller
             ->with('success', 'Solicitud cancelada correctamente.');
     }
 
-    // ─── Eliminar ─────────────────────────────────────────────────
-
+    // Eliminar solicitud cancelada o rechazada
     public function destroy($id)
     {
         $solicitud = Solicitud::findOrFail($id);
@@ -138,6 +124,6 @@ class SolicitudController extends Controller
             ->with('success', 'Solicitud eliminada correctamente.');
     }
 
-    public function edit($id)   { return redirect()->route('solicitudes.show', $id); }
+    public function edit($id) { return redirect()->route('solicitudes.show', $id); }
     public function update(\Illuminate\Http\Request $r, $id) { return redirect()->route('solicitudes.show', $id); }
 }

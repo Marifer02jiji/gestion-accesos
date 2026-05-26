@@ -44,6 +44,10 @@ Route::middleware(['auth', 'role:vigilante'])->group(function () {
     Route::post('/vigilante/entrada', [VigilanteController::class, 'registrarEntrada'])->name('vigilante.entrada');
     Route::post('/vigilante/salida', [VigilanteController::class, 'registrarSalida'])->name('vigilante.salida');
     Route::get('/vigilante/historial', [VigilanteController::class, 'historial'])->name('vigilante.historial');
+    Route::post('/vigilante/identificar', [VigilanteController::class, 'identificar'])->name('vigilante.identificar');
+    Route::get('/vigilante/salir-sesion', [VigilanteController::class, 'salirSesion'])->name('vigilante.salirSesion');
+
+
 });
 
 Route::middleware('auth')->group(function () {

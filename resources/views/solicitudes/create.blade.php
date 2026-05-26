@@ -5,13 +5,6 @@
 
     <div class="bg-white shadow-sm rounded-lg p-6">
 
-        {{-- Error si no carga el catálogo de motivos (RF11) --}}
-        @if(isset($error_motivos))
-            <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4 flex items-center gap-2">
-                <i class="fas fa-exclamation-circle"></i> {{ $error_motivos }}
-            </div>
-        @endif
-
         @if($errors->any())
             <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
                 <ul>
@@ -80,40 +73,44 @@
                     @enderror
                 </div>
 
-                {{-- Tolerancia --}}
+                {{-- Tolerancia Antes --}}
                 <div>
                     <label class="block text-sm font-semibold text-omg-slate mb-1">
                         <i class="fas fa-clock mr-1"></i> Tolerancia de Llegada <span class="text-red-500">*</span>
                     </label>
                     <select name="tolerancia_antes"
                         class="w-full border border-omg-kashmir rounded px-3 py-2 bg-omg-chardon focus:outline-none focus:ring-2 focus:ring-omg-nile">
-                        <option value="15">15 minutos</option>
-                        <option value="30">30 minutos</option>
+                        <option value="15" {{ old('tolerancia_antes') == 15 ? 'selected' : '' }}>15 minutos antes</option>
+                        <option value="30" {{ old('tolerancia_antes') == 30 ? 'selected' : '' }}>30 minutos antes</option>
                     </select>
+                    @error('tolerancia_antes')
+                        <p class="text-red-500 text-xs mt-1"><i class="fas fa-exclamation-circle"></i> {{ $message }}</p>
+                    @enderror
                 </div>
 
-                {{-- Motivo desde catálogo (RF18) --}}
+                {{-- Tolerancia Después --}}
+                <div>
+                    <label class="block text-sm font-semibold text-omg-slate mb-1">
+                        <i class="fas fa-clock mr-1"></i> Tolerancia de Salida <span class="text-red-500">*</span>
+                    </label>
+                    <select name="tolerancia_despues"
+                        class="w-full border border-omg-kashmir rounded px-3 py-2 bg-omg-chardon focus:outline-none focus:ring-2 focus:ring-omg-nile">
+                        <option value="15" {{ old('tolerancia_despues') == 15 ? 'selected' : '' }}>15 minutos después</option>
+                        <option value="30" {{ old('tolerancia_despues') == 30 ? 'selected' : '' }}>30 minutos después</option>
+                    </select>
+                    @error('tolerancia_despues')
+                        <p class="text-red-500 text-xs mt-1"><i class="fas fa-exclamation-circle"></i> {{ $message }}</p>
+                    @enderror
+                </div>
+
+                {{-- Motivo de Visita (texto libre) --}}
                 <div class="md:col-span-2">
                     <label class="block text-sm font-semibold text-omg-slate mb-1">
                         <i class="fas fa-file-alt mr-1"></i> Motivo de la Visita <span class="text-red-500">*</span>
                     </label>
-                    @if($motivos->isEmpty())
-                        <div class="bg-yellow-50 border border-yellow-300 text-yellow-700 px-3 py-2 rounded text-sm">
-                            <i class="fas fa-exclamation-triangle mr-1"></i>
-                            No fue posible cargar tipos de visitante. Recarga la página.
-                        </div>
-                    @else
-                        <select name="motivo_visita"
-                            class="w-full border border-omg-kashmir rounded px-3 py-2 bg-omg-chardon focus:outline-none focus:ring-2 focus:ring-omg-nile">
-                            <option value="" disabled selected>Seleccione el motivo de visita</option>
-                            @foreach($motivos as $motivo)
-                                <option value="{{ $motivo->nombre }}"
-                                    {{ old('motivo_visita') == $motivo->nombre ? 'selected' : '' }}>
-                                    {{ $motivo->nombre }}
-                                </option>
-                            @endforeach
-                        </select>
-                    @endif
+                    <textarea name="motivo_visita" rows="2"
+                        placeholder="Describa el motivo de la visita..."
+                        class="w-full border border-omg-kashmir rounded px-3 py-2 bg-omg-chardon focus:outline-none focus:ring-2 focus:ring-omg-nile">{{ old('motivo_visita') }}</textarea>
                     @error('motivo_visita')
                         <p class="text-red-500 text-xs mt-1"><i class="fas fa-exclamation-circle"></i> {{ $message }}</p>
                     @enderror
@@ -199,7 +196,6 @@
             btnAgregar.classList.toggle('hidden', !esGrupal);
             contador.classList.toggle('hidden', !esGrupal);
 
-            // Si cambia a Individual → eliminar visitantes extra
             if (!esGrupal) {
                 const cards = document.querySelectorAll('.visitante-card');
                 cards.forEach((card, index) => {
