@@ -91,7 +91,7 @@
                                     <i class="fas fa-history"></i> Historial
                                 </a>
 
-                                <a href="{{ route('vigilante.salirSesion') }}"
+                                <a href="{{ route('login') }}"
                                    class="bg-omg-coral text-white px-3 py-1 rounded-lg hover:opacity-90 transition text-sm flex items-center gap-1">
                                     <i class="fas fa-sign-out-alt"></i> Salir
                                 </a>
@@ -165,8 +165,8 @@
         {{-- Script de inactividad (solo usuarios autenticados) --}}
         @if(Auth::check())
         <script>
-            const MINUTOS_INACTIVIDAD = 15;
-            const SEGUNDOS_ADVERTENCIA = 60;
+            const MINUTOS_INACTIVIDAD = 20;   // Muestra aviso a los 20 minutos
+            const SEGUNDOS_ADVERTENCIA = 60;   // Da 60 seg para responder
 
             let timerInactividad;
             let timerCuentaRegresiva;

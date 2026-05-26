@@ -12,7 +12,7 @@ class VigilanteController extends Controller
     public function identificar(Request $request)
     {
         $request->validate([
-            'telefono' => 'required|string|max:15',
+            'telefono' => 'required|string|digits:10',
             'area'     => 'required|string|max:100',
         ]);
 
