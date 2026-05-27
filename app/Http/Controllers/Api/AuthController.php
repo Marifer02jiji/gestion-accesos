@@ -1,5 +1,4 @@
 <?php
-
 /**
  * Empresa: OMEGA
  * Proyecto: Sistema de Gestión de Accesos
@@ -19,7 +18,7 @@ use App\Models\Empleado;
 use App\Models\Notificacion;
 use App\Models\User;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 
 class AuthController extends Controller
 {
@@ -30,20 +29,16 @@ class AuthController extends Controller
             'password' => 'required|string',
         ]);
 
-        // Obtener usuario ingresado
         $usuarioInput = $request->usuario;
 
-        // Si viene con dominio institucional, quitarlo para buscar en SAM
         if (str_contains($usuarioInput, '@toluca.tecnm.mx')) {
             $usuarioInput = str_replace('@toluca.tecnm.mx', '', $usuarioInput);
         }
 
-        // Buscar empleado en SAM
         $empleado = Empleado::where('usuario', $usuarioInput)
             ->where('estatus', 'Activo')
             ->first();
 
-        // Validar credenciales
         if (!$empleado || $empleado->password !== hash('sha256', $request->password)) {
             return response()->json([
                 'message' => 'Las credenciales no coinciden con nuestros registros.',
@@ -51,7 +46,6 @@ class AuthController extends Controller
             ], 401);
         }
 
-        // Crear o buscar usuario local
         $user = User::firstOrCreate(
             ['email' => $empleado->usuario . '@toluca.tecnm.mx'],
             [
@@ -62,56 +56,43 @@ class AuthController extends Controller
             ]
         );
 
-        // Actualizar id_empleado_sam si no lo tenía
         if (!$user->id_empleado_sam) {
             $user->update(['id_empleado_sam' => $empleado->id_empleado]);
         }
 
-        // Asignar rol según credenciales del SAM (solo si no tiene rol)
-        if ($user->roles->isEmpty()) {
-            $rol = match($empleado->credenciales) {
-                'Administrador master' => 'autorizador',
-                default                => 'solicitante',
-            };
-            $user->assignRole($rol);
-        }
+        // Determinar si el empleado es autorizador
+        $esJefe = (int) $empleado->jefe === 1;
 
-        // Generar token
-        /*$token = $user->createToken('flutter-token')->plainTextToken;
+        $departamentosAutorizadores = DB::connection('sam')
+            ->table('departamento')
+            ->where(function ($query) {
+                $query->whereRaw('LOWER(nombre) LIKE ?', ['%recursos humanos%'])
+                      ->orWhereRaw('LOWER(nombre) LIKE ?', ['%recursos materiales%'])
+                      ->orWhereRaw('LOWER(nombre) LIKE ?', ['%divisiones de comunicación y difusión%'])
+                      ->orWhereRaw('LOWER(nombre) LIKE ?', ['%desarrollo académico%']);
+            })
+            ->pluck('id_departamento')
+            ->toArray();
 
-        return response()->json([
-            'message' => 'Inicio de sesión exitoso.',
-            'data'    => [
-                'token' => $token,
-                'user'  => [
-                    'id'              => $user->id,
-                    'name'            => $user->name,
-                    'email'           => $user->email,
-                    'id_empleado_sam' => $user->id_empleado_sam,
-                    'roles'           => $user->getRoleNames(),
-                    'nombre_completo' => $empleado->nombre . ' ' . $empleado->apellidoPa . ' ' . $empleado->apellidoMa,
-                    'credenciales'    => $empleado->credenciales,
-                ],
-            ],
-        ]);*/
+        $esDeptoAutorizador = in_array((int) $empleado->id_departamento, $departamentosAutorizadores, true);
 
-        // Generar token
+        $rolNuevo = ($esJefe || $esDeptoAutorizador) ? 'autorizador' : 'solicitante';
+
+        $user->syncRoles([$rolNuevo]);
+
         $token = $user->createToken('flutter-token')->plainTextToken;
 
-        // Extraer el primer rol asignado de la colección
-        $rolAsignado = $user->getRoleNames()->first() ?? 'solicitante';
-
         return response()->json([
             'message' => 'Inicio de sesión exitoso.',
             'data'    => [
-                'token' => $token,
-                'id'    => $user->id,
-                'name'  => $empleado->usuario ?? $user->name,
-                'email' => $user->email,
-                'rol'   => $rolAsignado, 
+                'token'           => $token,
+                'id'              => $user->id,
+                'name'            => $empleado->nombre . ' ' . $empleado->apellidoPa,
+                'email'           => $user->email,
+                'rol'             => $rolNuevo,
+                'id_departamento' => $empleado->id_departamento,
             ],
         ]);
-    }
     }
 
     public function logout(Request $request)
@@ -144,7 +125,6 @@ class AuthController extends Controller
     {
         $user = $request->user();
 
-        // Usar id_empleado_sam para filtrar notificaciones correctamente
         $notificaciones = Notificacion::where('id_empleado', $user->idSam())
             ->orderBy('fecha_creado', 'desc')
             ->paginate(10);
