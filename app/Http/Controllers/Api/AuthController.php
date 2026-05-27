@@ -9,11 +9,9 @@
  * ID: 1 | Fecha: 07/05/2026 | Descripción: Creación inicial
  * ID: 2 | Fecha: 25/05/2026 | Descripción: Asignación automática de rol
  * ID: 3 | Fecha: 26/05/2026 | Descripción: Fix búsqueda usuario SAM con dominio
- *                                           Fix password oculto en modelo Empleado
- *                                           Rol granular para app móvil
+ * Fix password oculto en modelo Empleado
+ * Rol granular para app móvil e inclusión de rol_api
  */
-
-
 
 namespace App\Http\Controllers\Api;
 
@@ -103,9 +101,10 @@ class AuthController extends Controller
                 'id_empleado_sam' => $empleado->id_empleado,
                 'name'            => $empleado->nombre . ' ' . $empleado->apellidoPa,
                 'email'           => $user->email,
-                'rol'             => $rolNuevo,     // ahora coincide con rol_api
-                'rol_api'         => $rolNuevo,
+                'rol'             => $rolNuevo,      // 'autorizador' o 'solicitante'
+                'rol_api'         => $rolNuevo,      // Consumido por Flutter para mapear el puesto
                 'id_departamento' => $empleado->id_departamento,
+                'departamento'    => '',             // Campo complementario opcional
             ],
         ]);
     }
