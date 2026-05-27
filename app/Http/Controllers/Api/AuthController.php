@@ -42,8 +42,17 @@ class AuthController extends Controller
             ->where('estatus', 'Activo')
             ->first();
 
-        // Validar credenciales con bcrypt
-        if (!$empleado || !Hash::check($request->password, $empleado->password)) {
+        // Validación híbrida: bcrypt o SHA-256
+        $valido = false;
+        if ($empleado) {
+            if (Hash::check($request->password, $empleado->password)) {
+                $valido = true; // bcrypt válido
+            } elseif ($empleado->password === hash('sha256', $request->password)) {
+                $valido = true; // SHA-256 válido
+            }
+        }
+
+        if (!$valido) {
             return response()->json([
                 'message' => 'Las credenciales no coinciden con nuestros registros.',
                 'data'    => null,
