@@ -1,5 +1,4 @@
 <?php
-
 /**
  * Empresa: OMEGA
  * Proyecto: Sistema de Gestión de Accesos
@@ -13,6 +12,8 @@
  *                                           Fix password oculto en modelo Empleado
  *                                           Rol granular para app móvil
  */
+
+
 
 namespace App\Http\Controllers\Api;
 
@@ -32,10 +33,10 @@ class AuthController extends Controller
             'password' => 'required|string',
         ]);
 
-        // Normalizar: el SAM guarda usuario CON dominio completo
+        // Normalizar usuario con dominio
         $usuarioInput = $request->usuario;
         if (!str_contains($usuarioInput, '@toluca.tecnm.mx')) {
-            $usuarioInput = $usuarioInput . '@toluca.tecnm.mx';
+            $usuarioInput .= '@toluca.tecnm.mx';
         }
 
         // Buscar empleado en SAM
@@ -43,8 +44,6 @@ class AuthController extends Controller
             ->where('estatus', 'Activo')
             ->first();
 
-        // Validar existencia y contraseña (SHA-256, formato del SAM)
-        // Usamos getAttributes() para saltarnos el $hidden del modelo
         if (!$empleado) {
             return response()->json([
                 'message' => 'Las credenciales no coinciden con nuestros registros.',
@@ -53,7 +52,6 @@ class AuthController extends Controller
         }
 
         $passwordSam = $empleado->getAttributes()['password'] ?? null;
-
         if (!$passwordSam || $passwordSam !== hash('sha256', $request->password)) {
             return response()->json([
                 'message' => 'Las credenciales no coinciden con nuestros registros.',
@@ -61,7 +59,7 @@ class AuthController extends Controller
             ], 401);
         }
 
-        // Crear o buscar usuario local en Laravel
+        // Crear o buscar usuario local
         $user = User::firstOrCreate(
             ['email' => $usuarioInput],
             [
@@ -76,7 +74,7 @@ class AuthController extends Controller
             $user->update(['id_empleado_sam' => $empleado->id_empleado]);
         }
 
-        // Determinar rol en el sistema (autorizador o solicitante)
+        // Determinar rol API
         $esJefe = (int) $empleado->jefe === 1;
 
         $departamentosAutorizadores = DB::connection('sam')
@@ -93,25 +91,7 @@ class AuthController extends Controller
         $esDeptoAutorizador = in_array((int) $empleado->id_departamento, $departamentosAutorizadores, true);
         $rolNuevo = ($esJefe || $esDeptoAutorizador) ? 'autorizador' : 'solicitante';
 
-        // syncRoles reemplaza cualquier rol anterior
         $user->syncRoles([$rolNuevo]);
-
-        // Determinar rol granular para la app móvil
-        $departamento = DB::connection('sam')
-            ->table('departamento')
-            ->where('id_departamento', $empleado->id_departamento)
-            ->first();
-
-        $nombreDepartamento = $departamento->nombre ?? '';
-
-        $rolApp = 'empleado';
-        if ($rolNuevo === 'autorizador') {
-            if (str_contains(strtolower($nombreDepartamento), 'recursos materiales')) {
-                $rolApp = 'recursos_materiales';
-            } else {
-                $rolApp = 'jefe';
-            }
-        }
 
         $token = $user->createToken('flutter-token')->plainTextToken;
 
@@ -123,10 +103,9 @@ class AuthController extends Controller
                 'id_empleado_sam' => $empleado->id_empleado,
                 'name'            => $empleado->nombre . ' ' . $empleado->apellidoPa,
                 'email'           => $user->email,
-                'rol'             => $rolApp,       // para la app: 'jefe', 'empleado', 'recursos_materiales'
-                'rol_api'         => $rolNuevo,     // para Sanctum: 'autorizador', 'solicitante'
+                'rol'             => $rolNuevo,     // ahora coincide con rol_api
+                'rol_api'         => $rolNuevo,
                 'id_departamento' => $empleado->id_departamento,
-                'departamento'    => $nombreDepartamento,
             ],
         ]);
     }
