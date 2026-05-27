@@ -31,10 +31,10 @@ class AuthController extends Controller
             'password' => 'required|string',
         ]);
 
-        // Normalizar: el SAM guarda el usuario CON dominio (mauro@toluca.tecnm.mx)
+        // Normalizar: el SAM guarda el usuario CON dominio (ej. mauro@toluca.tecnm.mx)
         $usuarioInput = $request->usuario;
         if (!str_contains($usuarioInput, '@toluca.tecnm.mx')) {
-            $usuarioInput = $usuarioInput . '@toluca.tecnm.mx';
+            $usuarioInput .= '@toluca.tecnm.mx';
         }
 
         // Buscar empleado en SAM usando el usuario con dominio
@@ -42,7 +42,7 @@ class AuthController extends Controller
             ->where('estatus', 'Activo')
             ->first();
 
-        // Validar credenciales
+        // Validar credenciales con bcrypt
         if (!$empleado || !Hash::check($request->password, $empleado->password)) {
             return response()->json([
                 'message' => 'Las credenciales no coinciden con nuestros registros.',
@@ -84,7 +84,7 @@ class AuthController extends Controller
 
         $rolNuevo = ($esJefe || $esDeptoAutorizador) ? 'autorizador' : 'solicitante';
 
-        // syncRoles reemplaza el rol anterior (a diferencia de assignRole que solo agrega)
+        // syncRoles reemplaza el rol anterior
         $user->syncRoles([$rolNuevo]);
 
         $token = $user->createToken('flutter-token')->plainTextToken;
