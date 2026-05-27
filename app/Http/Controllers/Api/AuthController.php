@@ -19,6 +19,7 @@ use App\Models\Notificacion;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
 
 class AuthController extends Controller
 {
@@ -39,7 +40,8 @@ class AuthController extends Controller
             ->where('estatus', 'Activo')
             ->first();
 
-        if (!$empleado || $empleado->password !== hash('sha256', $request->password)) {
+        // Validar credenciales con bcrypt
+        if (!$empleado || !Hash::check($request->password, $empleado->password)) {
             return response()->json([
                 'message' => 'Las credenciales no coinciden con nuestros registros.',
                 'data'    => null,
@@ -135,3 +137,4 @@ class AuthController extends Controller
         ]);
     }
 }
+
