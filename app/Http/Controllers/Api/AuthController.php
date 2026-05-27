@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Empresa: OMEGA
  * Proyecto: Sistema de Gestión de Accesos
@@ -30,17 +31,18 @@ class AuthController extends Controller
             'password' => 'required|string',
         ]);
 
+        // Normalizar: el SAM guarda el usuario CON dominio (mauro@toluca.tecnm.mx)
         $usuarioInput = $request->usuario;
-
-        if (str_contains($usuarioInput, '@toluca.tecnm.mx')) {
-            $usuarioInput = str_replace('@toluca.tecnm.mx', '', $usuarioInput);
+        if (!str_contains($usuarioInput, '@toluca.tecnm.mx')) {
+            $usuarioInput = $usuarioInput . '@toluca.tecnm.mx';
         }
 
+        // Buscar empleado en SAM usando el usuario con dominio
         $empleado = Empleado::where('usuario', $usuarioInput)
             ->where('estatus', 'Activo')
             ->first();
 
-        // Validar credenciales con bcrypt
+        // Validar credenciales
         if (!$empleado || !Hash::check($request->password, $empleado->password)) {
             return response()->json([
                 'message' => 'Las credenciales no coinciden con nuestros registros.',
@@ -48,21 +50,23 @@ class AuthController extends Controller
             ], 401);
         }
 
+        // Crear o buscar usuario local en la BD de Laravel
         $user = User::firstOrCreate(
-            ['email' => $empleado->usuario . '@toluca.tecnm.mx'],
+            ['email' => $usuarioInput],
             [
                 'name'            => $empleado->nombre . ' ' . $empleado->apellidoPa,
-                'email'           => $empleado->usuario . '@toluca.tecnm.mx',
+                'email'           => $usuarioInput,
                 'password'        => bcrypt($request->password),
                 'id_empleado_sam' => $empleado->id_empleado,
             ]
         );
 
+        // Actualizar id_empleado_sam si no lo tenía
         if (!$user->id_empleado_sam) {
             $user->update(['id_empleado_sam' => $empleado->id_empleado]);
         }
 
-        // Determinar si el empleado es autorizador
+        // Determinar rol: es autorizador si es jefe O pertenece a depto autorizador
         $esJefe = (int) $empleado->jefe === 1;
 
         $departamentosAutorizadores = DB::connection('sam')
@@ -80,6 +84,7 @@ class AuthController extends Controller
 
         $rolNuevo = ($esJefe || $esDeptoAutorizador) ? 'autorizador' : 'solicitante';
 
+        // syncRoles reemplaza el rol anterior (a diferencia de assignRole que solo agrega)
         $user->syncRoles([$rolNuevo]);
 
         $token = $user->createToken('flutter-token')->plainTextToken;
@@ -137,4 +142,3 @@ class AuthController extends Controller
         ]);
     }
 }
-
