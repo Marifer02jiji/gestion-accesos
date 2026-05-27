@@ -22,7 +22,6 @@ use App\Models\Notificacion;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Log;
 
 class AuthController extends Controller
 {
@@ -47,23 +46,27 @@ class AuthController extends Controller
         if (!$empleado) {
             return response()->json([
                 'message' => 'Las credenciales no coinciden con nuestros registros.',
+                'debug'   => [
+                    'usuario' => $usuarioInput,
+                    'empleado_encontrado' => false,
+                ],
                 'data'    => null,
             ], 401);
         }
 
-        // TEMPORAL — quitar después
-        Log::info('DEBUG PASSWORD', [
-            'usuario'         => $empleado->usuario,
-            'password_length' => strlen($empleado->getAttributes()['password'] ?? ''),
-            'password_prefix' => substr($empleado->getAttributes()['password'] ?? '', 0, 7),
-            'sha256_match'    => ($empleado->getAttributes()['password'] === hash('sha256', $request->password)),
-        ]);
-
         // Validar contraseña (SHA-256, formato del SAM)
         $passwordSam = $empleado->getAttributes()['password'] ?? null;
-        if (!$passwordSam || $passwordSam !== hash('sha256', $request->password)) {
+        $sha256Match = $passwordSam === hash('sha256', $request->password);
+
+        if (!$sha256Match) {
             return response()->json([
                 'message' => 'Las credenciales no coinciden con nuestros registros.',
+                'debug'   => [
+                    'usuario'         => $empleado->usuario,
+                    'password_length' => strlen($passwordSam ?? ''),
+                    'password_prefix' => substr($passwordSam ?? '', 0, 7),
+                    'sha256_match'    => $sha256Match,
+                ],
                 'data'    => null,
             ], 401);
         }
@@ -113,8 +116,8 @@ class AuthController extends Controller
                 'id_empleado_sam' => $empleado->id_empleado,
                 'name'            => $empleado->nombre . ' ' . $empleado->apellidoPa,
                 'email'           => $user->email,
-                'rol'             => $rolNuevo,   // 'autorizador' o 'solicitante'
-                'rol_api'         => $rolNuevo,   // Consumido por Flutter para mapear el puesto
+                'rol'             => $rolNuevo,
+                'rol_api'         => $rolNuevo,
                 'id_departamento' => $empleado->id_departamento,
                 'departamento'    => '',
             ],
