@@ -11,7 +11,6 @@
  * ID: 3 | Fecha: 26/05/2026 | Descripción: Fix búsqueda usuario SAM con dominio
  * Fix password oculto en modelo Empleado
  * Rol granular para app móvil e inclusión de rol_api
- * ID: 4 | Fecha: 26/05/2026 | Descripción: Inserción temporal de logs para auditoría de roles en SAM
  */
 
 namespace App\Http\Controllers\Api;
@@ -80,36 +79,15 @@ class AuthController extends Controller
             ->table('departamento')
             ->where(function ($q) {
                 $q->whereRaw('LOWER(nombre) LIKE ?', ['%recursos humanos%'])
-                  ->orWhereRaw('LOWER(nombre) LIKE ?', ['%recursos materiales%'])
-                  ->orWhereRaw('LOWER(nombre) LIKE ?', ['%divisiones de comunicación y difusión%'])
-                  ->orWhereRaw('LOWER(nombre) LIKE ?', ['%desarrollo académico%']);
+          ->orWhereRaw('LOWER(nombre) LIKE ?', ['%recursos materiales%'])
+          ->orWhereRaw('LOWER(nombre) LIKE ?', ['%comunicacion y difusion%'])
+          ->orWhereRaw('LOWER(nombre) LIKE ?', ['%desarrollo academico%']);
             })
             ->pluck('id_departamento')
             ->toArray();
 
         $esDeptoAutorizador = in_array((int) $empleado->id_departamento, $departamentosAutorizadores, true);
         $rolNuevo = ($esJefe || $esDeptoAutorizador) ? 'autorizador' : 'solicitante';
-
-        // ---------------------------------------------------------------------
-        // LOGS TEMPORALES DE DIAGNÓSTICO (Quitar tras la validación)
-        // ---------------------------------------------------------------------
-        $todosDepartamentos = DB::connection('sam')
-            ->table('departamento')
-            ->select('id_departamento', 'nombre')
-            ->get();
-
-        \Log::info('DEPARTAMENTOS SAM', $todosDepartamentos->toArray());
-
-        \Log::info('DEBUG ROL', [
-            'usuario'              => $empleado->usuario,
-            'jefe'                 => $empleado->jefe,
-            'id_departamento'      => $empleado->id_departamento,
-            'deptos_autorizadores' => $departamentosAutorizadores,
-            'es_jefe'              => $esJefe,
-            'es_depto'             => $esDeptoAutorizador,
-            'rol_asignado'         => $rolNuevo,
-        ]);
-        // ---------------------------------------------------------------------
 
         $user->syncRoles([$rolNuevo]);
 
@@ -123,10 +101,10 @@ class AuthController extends Controller
                 'id_empleado_sam' => $empleado->id_empleado,
                 'name'            => $empleado->nombre . ' ' . $empleado->apellidoPa,
                 'email'           => $user->email,
-                'rol'             => $rolNuevo,
-                'rol_api'         => $rolNuevo,
+                'rol'             => $rolNuevo,      // 'autorizador' o 'solicitante'
+                'rol_api'         => $rolNuevo,      // Consumido por Flutter para mapear el puesto
                 'id_departamento' => $empleado->id_departamento,
-                'departamento'    => '',
+                'departamento'    => '',             // Campo complementario opcional
             ],
         ]);
     }
