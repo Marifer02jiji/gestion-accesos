@@ -14,6 +14,7 @@
  *                                           Rol granular para app móvil e inclusión de rol_api
  * ID: 4 | Fecha: 27/05/2026 | Descripción: Ajuste nombres de departamentos autorizadores
  */
+
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
@@ -46,27 +47,16 @@ class AuthController extends Controller
         if (!$empleado) {
             return response()->json([
                 'message' => 'Las credenciales no coinciden con nuestros registros.',
-                'debug'   => [
-                    'usuario' => $usuarioInput,
-                    'empleado_encontrado' => false,
-                ],
                 'data'    => null,
             ], 401);
         }
 
         // Validar contraseña (SHA-256, formato del SAM)
+        // getAttributes() omite el $hidden del modelo
         $passwordSam = $empleado->getAttributes()['password'] ?? null;
-        $sha256Match = $passwordSam === hash('sha256', $request->password);
-
-        if (!$sha256Match) {
+        if (!$passwordSam || $passwordSam !== hash('sha256', $request->password)) {
             return response()->json([
                 'message' => 'Las credenciales no coinciden con nuestros registros.',
-                'debug'   => [
-                    'usuario'         => $empleado->usuario,
-                    'password_length' => strlen($passwordSam ?? ''),
-                    'password_prefix' => substr($passwordSam ?? '', 0, 7),
-                    'sha256_match'    => $sha256Match,
-                ],
                 'data'    => null,
             ], 401);
         }
@@ -116,8 +106,8 @@ class AuthController extends Controller
                 'id_empleado_sam' => $empleado->id_empleado,
                 'name'            => $empleado->nombre . ' ' . $empleado->apellidoPa,
                 'email'           => $user->email,
-                'rol'             => $rolNuevo,
-                'rol_api'         => $rolNuevo,
+                'rol'             => $rolNuevo,   // 'autorizador' o 'solicitante'
+                'rol_api'         => $rolNuevo,   // Consumido por Flutter para mapear el puesto
                 'id_departamento' => $empleado->id_departamento,
                 'departamento'    => '',
             ],
