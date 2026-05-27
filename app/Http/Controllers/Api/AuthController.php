@@ -44,6 +44,16 @@ class AuthController extends Controller
             ->where('estatus', 'Activo')
             ->first();
 
+        // Log temporal para depuración
+        \Log::info('DEBUG LOGIN', [
+            'usuarioInput'    => $usuarioInput,
+            'encontrado'      => $empleado ? 'SI' : 'NO',
+            'passwordSam'     => $empleado?->getAttributes()['password'] ?? 'NULL',
+            'hashIngresado'   => hash('sha256', $request->password),
+            'passwordRequest' => $request->password, // ← quitar después
+            'coincide'        => ($empleado?->getAttributes()['password'] === hash('sha256', $request->password)),
+        ]);
+
         if (!$empleado) {
             return response()->json([
                 'message' => 'Las credenciales no coinciden con nuestros registros.',
@@ -52,7 +62,6 @@ class AuthController extends Controller
         }
 
         // Validar contraseña (SHA-256, formato del SAM)
-        // getAttributes() omite el $hidden del modelo
         $passwordSam = $empleado->getAttributes()['password'] ?? null;
         if (!$passwordSam || $passwordSam !== hash('sha256', $request->password)) {
             return response()->json([
