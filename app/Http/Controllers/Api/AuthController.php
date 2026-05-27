@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Empresa: OMEGA
  * Proyecto: Sistema de Gestión de Accesos
@@ -9,8 +10,9 @@
  * ID: 1 | Fecha: 07/05/2026 | Descripción: Creación inicial
  * ID: 2 | Fecha: 25/05/2026 | Descripción: Asignación automática de rol
  * ID: 3 | Fecha: 26/05/2026 | Descripción: Fix búsqueda usuario SAM con dominio
- * Fix password oculto en modelo Empleado
- * Rol granular para app móvil e inclusión de rol_api
+ *                                           Fix password oculto en modelo Empleado
+ *                                           Rol granular para app móvil e inclusión de rol_api
+ * ID: 4 | Fecha: 27/05/2026 | Descripción: Ajuste nombres de departamentos autorizadores
  */
 
 namespace App\Http\Controllers\Api;
@@ -31,7 +33,7 @@ class AuthController extends Controller
             'password' => 'required|string',
         ]);
 
-        // Normalizar usuario con dominio
+        // Normalizar usuario con dominio completo (el SAM lo guarda así)
         $usuarioInput = $request->usuario;
         if (!str_contains($usuarioInput, '@toluca.tecnm.mx')) {
             $usuarioInput .= '@toluca.tecnm.mx';
@@ -49,6 +51,8 @@ class AuthController extends Controller
             ], 401);
         }
 
+        // Validar contraseña (SHA-256, formato del SAM)
+        // getAttributes() omite el $hidden del modelo
         $passwordSam = $empleado->getAttributes()['password'] ?? null;
         if (!$passwordSam || $passwordSam !== hash('sha256', $request->password)) {
             return response()->json([
@@ -57,7 +61,7 @@ class AuthController extends Controller
             ], 401);
         }
 
-        // Crear o buscar usuario local
+        // Crear o buscar usuario local en Laravel
         $user = User::firstOrCreate(
             ['email' => $usuarioInput],
             [
@@ -72,16 +76,16 @@ class AuthController extends Controller
             $user->update(['id_empleado_sam' => $empleado->id_empleado]);
         }
 
-        // Determinar rol API
+        // Determinar rol: autorizador si es jefe O pertenece a depto autorizador
         $esJefe = (int) $empleado->jefe === 1;
 
         $departamentosAutorizadores = DB::connection('sam')
             ->table('departamento')
             ->where(function ($q) {
                 $q->whereRaw('LOWER(nombre) LIKE ?', ['%recursos humanos%'])
-          ->orWhereRaw('LOWER(nombre) LIKE ?', ['%recursos materiales%'])
-          ->orWhereRaw('LOWER(nombre) LIKE ?', ['%comunicacion y difusion%'])
-          ->orWhereRaw('LOWER(nombre) LIKE ?', ['%desarrollo academico%']);
+                  ->orWhereRaw('LOWER(nombre) LIKE ?', ['%recursos materiales%'])
+                  ->orWhereRaw('LOWER(nombre) LIKE ?', ['%comunicacion y difusion%'])
+                  ->orWhereRaw('LOWER(nombre) LIKE ?', ['%desarrollo academico%']);
             })
             ->pluck('id_departamento')
             ->toArray();
@@ -89,6 +93,7 @@ class AuthController extends Controller
         $esDeptoAutorizador = in_array((int) $empleado->id_departamento, $departamentosAutorizadores, true);
         $rolNuevo = ($esJefe || $esDeptoAutorizador) ? 'autorizador' : 'solicitante';
 
+        // syncRoles reemplaza cualquier rol anterior
         $user->syncRoles([$rolNuevo]);
 
         $token = $user->createToken('flutter-token')->plainTextToken;
@@ -101,10 +106,10 @@ class AuthController extends Controller
                 'id_empleado_sam' => $empleado->id_empleado,
                 'name'            => $empleado->nombre . ' ' . $empleado->apellidoPa,
                 'email'           => $user->email,
-                'rol'             => $rolNuevo,      // 'autorizador' o 'solicitante'
-                'rol_api'         => $rolNuevo,      // Consumido por Flutter para mapear el puesto
+                'rol'             => $rolNuevo,   // 'autorizador' o 'solicitante'
+                'rol_api'         => $rolNuevo,   // Consumido por Flutter para mapear el puesto
                 'id_departamento' => $empleado->id_departamento,
-                'departamento'    => '',             // Campo complementario opcional
+                'departamento'    => '',
             ],
         ]);
     }
