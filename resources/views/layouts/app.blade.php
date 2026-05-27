@@ -110,13 +110,17 @@
                             <h1 class="text-white font-heading font-bold text-xl flex items-center gap-2">
                                 {{ $header }}
                             </h1>
-                            @if(Auth::check() && Auth::user()->hasRole('solicitante'))
+                            @if(Auth::check() && Auth::user()->hasRole('administrador'))
                                 <span class="text-omg-chardon text-xs flex items-center gap-1 opacity-80">
-                                    <i class="fas fa-user"></i> Solicitante
+                                    <i class="fas fa-user-shield"></i> Administrador
                                 </span>
                             @elseif(Auth::check() && Auth::user()->hasRole('autorizador'))
                                 <span class="text-omg-chardon text-xs flex items-center gap-1 opacity-80">
                                     <i class="fas fa-clipboard-check"></i> Autorizador
+                                </span>
+                            @elseif(Auth::check() && Auth::user()->hasRole('solicitante'))
+                                <span class="text-omg-chardon text-xs flex items-center gap-1 opacity-80">
+                                    <i class="fas fa-user"></i> Solicitante
                                 </span>
                             @elseif(!Auth::check())
                                 <span class="text-omg-chardon text-xs flex items-center gap-1 opacity-80">

@@ -73,16 +73,13 @@ class LoginRequest extends FormRequest
         }
 
         // Asignar rol según credenciales del SAM
-        if ($user->roles->isEmpty()) {
+        $roles = match($empleado->credenciales) {
+            'Administrador master' => ['administrador', 'autorizador'],
+            default => ['solicitante'],
+        };
 
-            $rol = match($empleado->credenciales) {
-
-                'Administrador master' => 'autorizador',
-
-                default => 'solicitante',
-            };
-
-            $user->assignRole($rol);
+        if (!$user->hasAllRoles($roles)) {
+            $user->assignRole($roles);
         }
 
         // Login
