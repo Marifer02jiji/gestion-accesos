@@ -1,14 +1,16 @@
 <?php
-
 /**
  * Empresa: OMEGA
  * Proyecto: Sistema de Gestión de Accesos
  * Creación: 07/05/2026
  * Creado por: Desarrollador
- * Aprobado por: Líder del Área
  *
  * Changelog:
- * ID: 1 | Fecha: 07/05/2026 | Modificado por: Desarrollador | Descripción: Creación inicial
+ * ID: 1 | Fecha: 07/05/2026 | Descripción: Creación inicial
+ * ID: 2 | Fecha: 25/05/2026 | Descripción: Asignación automática de rol
+ * ID: 3 | Fecha: 26/05/2026 | Descripción: Fix búsqueda usuario SAM con dominio
+ * Fix password oculto en modelo Empleado
+ * Rol granular para app móvil e inclusión de rol_api
  */
 
 namespace App\Http\Controllers\Api;
@@ -18,7 +20,7 @@ use App\Models\Empleado;
 use App\Models\Notificacion;
 use App\Models\User;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 
 class AuthController extends Controller
 {
@@ -29,13 +31,10 @@ class AuthController extends Controller
             'password' => 'required|string',
         ]);
 
-        // Obtener usuario ingresado
+        // Normalizar usuario con dominio
         $usuarioInput = $request->usuario;
-
-        // Si viene con dominio institucional,
-        // quitarlo para buscar en SAM
-        if (str_contains($usuarioInput, '@toluca.tecnm.mx')) {
-            $usuarioInput = str_replace('@toluca.tecnm.mx', '', $usuarioInput);
+        if (!str_contains($usuarioInput, '@toluca.tecnm.mx')) {
+            $usuarioInput .= '@toluca.tecnm.mx';
         }
 
         // Buscar empleado en SAM
@@ -43,9 +42,15 @@ class AuthController extends Controller
             ->where('estatus', 'Activo')
             ->first();
 
-        // Validar credenciales
-        if (!$empleado || $empleado->password !== hash('sha256', $request->password)) {
+        if (!$empleado) {
+            return response()->json([
+                'message' => 'Las credenciales no coinciden con nuestros registros.',
+                'data'    => null,
+            ], 401);
+        }
 
+        $passwordSam = $empleado->getAttributes()['password'] ?? null;
+        if (!$passwordSam || $passwordSam !== hash('sha256', $request->password)) {
             return response()->json([
                 'message' => 'Las credenciales no coinciden con nuestros registros.',
                 'data'    => null,
@@ -54,30 +59,52 @@ class AuthController extends Controller
 
         // Crear o buscar usuario local
         $user = User::firstOrCreate(
+            ['email' => $usuarioInput],
             [
-                'email' => $empleado->usuario . '@toluca.tecnm.mx'
-            ],
-            [
-                'name'            => $empleado->usuario,
-                'email'           => $empleado->usuario . '@toluca.tecnm.mx',
+                'name'            => $empleado->nombre . ' ' . $empleado->apellidoPa,
+                'email'           => $usuarioInput,
                 'password'        => bcrypt($request->password),
                 'id_empleado_sam' => $empleado->id_empleado,
             ]
         );
 
-        // Generar token
+        if (!$user->id_empleado_sam) {
+            $user->update(['id_empleado_sam' => $empleado->id_empleado]);
+        }
+
+        // Determinar rol API
+        $esJefe = (int) $empleado->jefe === 1;
+
+        $departamentosAutorizadores = DB::connection('sam')
+            ->table('departamento')
+            ->where(function ($q) {
+                $q->whereRaw('LOWER(nombre) LIKE ?', ['%recursos humanos%'])
+                  ->orWhereRaw('LOWER(nombre) LIKE ?', ['%recursos materiales%'])
+                  ->orWhereRaw('LOWER(nombre) LIKE ?', ['%divisiones de comunicación y difusión%'])
+                  ->orWhereRaw('LOWER(nombre) LIKE ?', ['%desarrollo académico%']);
+            })
+            ->pluck('id_departamento')
+            ->toArray();
+
+        $esDeptoAutorizador = in_array((int) $empleado->id_departamento, $departamentosAutorizadores, true);
+        $rolNuevo = ($esJefe || $esDeptoAutorizador) ? 'autorizador' : 'solicitante';
+
+        $user->syncRoles([$rolNuevo]);
+
         $token = $user->createToken('flutter-token')->plainTextToken;
 
         return response()->json([
             'message' => 'Inicio de sesión exitoso.',
             'data'    => [
-                'token' => $token,
-                'user'  => [
-                    'id'     => $user->id,
-                    'name'   => $user->name,
-                    'email'  => $user->email,
-                    'roles'  => $user->getRoleNames(),
-                ],
+                'token'           => $token,
+                'id'              => $user->id,
+                'id_empleado_sam' => $empleado->id_empleado,
+                'name'            => $empleado->nombre . ' ' . $empleado->apellidoPa,
+                'email'           => $user->email,
+                'rol'             => $rolNuevo,      // 'autorizador' o 'solicitante'
+                'rol_api'         => $rolNuevo,      // Consumido por Flutter para mapear el puesto
+                'id_departamento' => $empleado->id_departamento,
+                'departamento'    => '',             // Campo complementario opcional
             ],
         ]);
     }
@@ -94,20 +121,25 @@ class AuthController extends Controller
 
     public function perfil(Request $request)
     {
+        $user = $request->user();
+
         return response()->json([
             'message' => 'Perfil obtenido correctamente.',
             'data'    => [
-                'id'    => $request->user()->id,
-                'name'  => $request->user()->name,
-                'email' => $request->user()->email,
-                'roles' => $request->user()->getRoleNames(),
+                'id'              => $user->id,
+                'name'            => $user->name,
+                'email'           => $user->email,
+                'id_empleado_sam' => $user->id_empleado_sam,
+                'roles'           => $user->getRoleNames(),
             ],
         ]);
     }
 
     public function notificaciones(Request $request)
     {
-        $notificaciones = Notificacion::where('id_empleado', $request->user()->id)
+        $user = $request->user();
+
+        $notificaciones = Notificacion::where('id_empleado', $user->idSam())
             ->orderBy('fecha_creado', 'desc')
             ->paginate(10);
 
