@@ -14,7 +14,6 @@
  *                                           Rol granular para app móvil e inclusión de rol_api
  * ID: 4 | Fecha: 27/05/2026 | Descripción: Ajuste nombres de departamentos autorizadores
  */
-
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
@@ -33,13 +32,14 @@ class AuthController extends Controller
             'password' => 'required|string',
         ]);
 
-        // Normalizar usuario con dominio completo (el SAM lo guarda así)
+        // SAM guarda solo el nombre de usuario sin dominio (ej: "mauro")
+        // Si Flutter manda "mauro@toluca.tecnm.mx", extraemos solo "mauro"
         $usuarioInput = $request->usuario;
-        if (!str_contains($usuarioInput, '@toluca.tecnm.mx')) {
-            $usuarioInput .= '@toluca.tecnm.mx';
+        if (str_contains($usuarioInput, '@')) {
+            $usuarioInput = explode('@', $usuarioInput)[0];
         }
 
-        // Buscar empleado en SAM
+        // Buscar empleado en SAM con el usuario limpio (sin dominio)
         $empleado = Empleado::where('usuario', $usuarioInput)
             ->where('estatus', 'Activo')
             ->first();
@@ -61,12 +61,15 @@ class AuthController extends Controller
             ], 401);
         }
 
+        // El User local de Laravel necesita email con dominio
+        $emailLocal = $usuarioInput . '@toluca.tecnm.mx';
+
         // Crear o buscar usuario local en Laravel
         $user = User::firstOrCreate(
-            ['email' => $usuarioInput],
+            ['email' => $emailLocal],
             [
                 'name'            => $empleado->nombre . ' ' . $empleado->apellidoPa,
-                'email'           => $usuarioInput,
+                'email'           => $emailLocal,
                 'password'        => bcrypt($request->password),
                 'id_empleado_sam' => $empleado->id_empleado,
             ]
@@ -93,6 +96,11 @@ class AuthController extends Controller
         $esDeptoAutorizador = in_array((int) $empleado->id_departamento, $departamentosAutorizadores, true);
         $rolNuevo = ($esJefe || $esDeptoAutorizador) ? 'autorizador' : 'solicitante';
 
+        // Asegura que el rol exista antes de asignarlo (evita crash de Spatie)
+        \Spatie\Permission\Models\Role::firstOrCreate(
+            ['name' => $rolNuevo, 'guard_name' => 'web']
+        );
+
         // syncRoles reemplaza cualquier rol anterior
         $user->syncRoles([$rolNuevo]);
 
@@ -106,8 +114,8 @@ class AuthController extends Controller
                 'id_empleado_sam' => $empleado->id_empleado,
                 'name'            => $empleado->nombre . ' ' . $empleado->apellidoPa,
                 'email'           => $user->email,
-                'rol'             => $rolNuevo,   // 'autorizador' o 'solicitante'
-                'rol_api'         => $rolNuevo,   // Consumido por Flutter para mapear el puesto
+                'rol'             => $rolNuevo,
+                'rol_api'         => $rolNuevo,
                 'id_departamento' => $empleado->id_departamento,
                 'departamento'    => '',
             ],
