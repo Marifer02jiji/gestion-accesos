@@ -11,6 +11,7 @@
  * ID: 3 | Fecha: 26/05/2026 | Descripción: Fix búsqueda usuario SAM con dominio
  * Fix password oculto en modelo Empleado
  * Rol granular para app móvil e inclusión de rol_api
+ * ID: 4 | Fecha: 26/05/2026 | Descripción: Inserción temporal de logs para auditoría de roles en SAM
  */
 
 namespace App\Http\Controllers\Api;
@@ -89,6 +90,27 @@ class AuthController extends Controller
         $esDeptoAutorizador = in_array((int) $empleado->id_departamento, $departamentosAutorizadores, true);
         $rolNuevo = ($esJefe || $esDeptoAutorizador) ? 'autorizador' : 'solicitante';
 
+        // ---------------------------------------------------------------------
+        // LOGS TEMPORALES DE DIAGNÓSTICO (Quitar tras la validación)
+        // ---------------------------------------------------------------------
+        $todosDepartamentos = DB::connection('sam')
+            ->table('departamento')
+            ->select('id_departamento', 'nombre')
+            ->get();
+
+        \Log::info('DEPARTAMENTOS SAM', $todosDepartamentos->toArray());
+
+        \Log::info('DEBUG ROL', [
+            'usuario'              => $empleado->usuario,
+            'jefe'                 => $empleado->jefe,
+            'id_departamento'      => $empleado->id_departamento,
+            'deptos_autorizadores' => $departamentosAutorizadores,
+            'es_jefe'              => $esJefe,
+            'es_depto'             => $esDeptoAutorizador,
+            'rol_asignado'         => $rolNuevo,
+        ]);
+        // ---------------------------------------------------------------------
+
         $user->syncRoles([$rolNuevo]);
 
         $token = $user->createToken('flutter-token')->plainTextToken;
@@ -101,10 +123,10 @@ class AuthController extends Controller
                 'id_empleado_sam' => $empleado->id_empleado,
                 'name'            => $empleado->nombre . ' ' . $empleado->apellidoPa,
                 'email'           => $user->email,
-                'rol'             => $rolNuevo,      // 'autorizador' o 'solicitante'
-                'rol_api'         => $rolNuevo,      // Consumido por Flutter para mapear el puesto
+                'rol'             => $rolNuevo,
+                'rol_api'         => $rolNuevo,
                 'id_departamento' => $empleado->id_departamento,
-                'departamento'    => '',             // Campo complementario opcional
+                'departamento'    => '',
             ],
         ]);
     }
