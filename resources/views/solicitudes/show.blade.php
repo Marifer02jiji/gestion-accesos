@@ -11,7 +11,12 @@
             </div>
         @endif
 
-        {{-- Folio destacado (RF14 / RF35) --}}
+        @if(session('error'))
+            <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4 flex items-center gap-2">
+                <i class="fas fa-exclamation-circle"></i> {{ session('error') }}
+            </div>
+        @endif
+
         @if($solicitud->folio)
             <div class="bg-omg-chardon border border-omg-kashmir rounded-xl px-5 py-3 mb-6 flex items-center justify-between">
                 <div>
@@ -64,7 +69,7 @@
                 <p class="text-sm text-omg-kashmir font-semibold flex items-center gap-1">
                     <i class="fas fa-clock"></i> Tolerancia
                 </p>
-                <p class="font-semibold text-omg-slate">{{ $solicitud->tolerancia_antes }} minutos antes / {{ $solicitud->tolerancia_despues }} minutos después</p>
+                <p class="font-semibold text-omg-slate">{{ $solicitud->tolerancia_antes }} min antes / {{ $solicitud->tolerancia_despues }} min después</p>
             </div>
         </div>
 
@@ -99,7 +104,7 @@
 
             @if($solicitud->estado->nombre == 'Pendiente')
                 <form action="{{ route('solicitudes.cancelar', $solicitud->id_solicitud) }}" method="POST"
-                    onsubmit="return confirm('¿Estás seguro de cancelar esta solicitud? El QR asociado también será cancelado.')">
+                    onsubmit="return confirm('¿Desea cancelar esta solicitud?')">
                     @csrf
                     <button type="submit"
                         class="bg-red-600 text-white px-4 py-2 rounded hover:opacity-90 font-heading font-semibold flex items-center gap-2">
@@ -109,10 +114,14 @@
             @endif
 
             @if($solicitud->estado->nombre == 'Autorizada')
-                <a href="{{ route('solicitudes.qr', $solicitud->id_solicitud) }}"
-                   class="bg-omg-coral text-white px-4 py-2 rounded hover:opacity-90 font-heading font-semibold flex items-center gap-2">
-                    <i class="fas fa-qrcode"></i> Ver QR
-                </a>
+                <form action="{{ route('solicitudes.enviarQR', $solicitud->id_solicitud) }}" method="POST"
+                    onsubmit="return confirm('¿Desea enviar el pase QR al visitante?')">
+                    @csrf
+                    <button type="submit"
+                        class="bg-omg-coral text-white px-4 py-2 rounded hover:opacity-90 font-heading font-semibold flex items-center gap-2">
+                        <i class="fas fa-paper-plane"></i> Enviar QR al Visitante
+                    </button>
+                </form>
             @endif
         </div>
     </div>
