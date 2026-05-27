@@ -11,7 +11,6 @@
  * ID: 1 | Fecha: 07/05/2026 | Modificado por: Desarrollador | Descripción: Creación inicial
  */
 
-<?php
 
 namespace App\Http\Controllers\Api;
 
