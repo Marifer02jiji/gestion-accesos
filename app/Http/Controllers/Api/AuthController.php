@@ -14,7 +14,6 @@
  *                                           Rol granular para app móvil e inclusión de rol_api
  * ID: 4 | Fecha: 27/05/2026 | Descripción: Ajuste nombres de departamentos autorizadores
  */
-
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
@@ -23,6 +22,7 @@ use App\Models\Notificacion;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class AuthController extends Controller
 {
@@ -51,8 +51,15 @@ class AuthController extends Controller
             ], 401);
         }
 
+        // TEMPORAL — quitar después
+        Log::info('DEBUG PASSWORD', [
+            'usuario'         => $empleado->usuario,
+            'password_length' => strlen($empleado->getAttributes()['password'] ?? ''),
+            'password_prefix' => substr($empleado->getAttributes()['password'] ?? '', 0, 7),
+            'sha256_match'    => ($empleado->getAttributes()['password'] === hash('sha256', $request->password)),
+        ]);
+
         // Validar contraseña (SHA-256, formato del SAM)
-        // getAttributes() omite el $hidden del modelo
         $passwordSam = $empleado->getAttributes()['password'] ?? null;
         if (!$passwordSam || $passwordSam !== hash('sha256', $request->password)) {
             return response()->json([
