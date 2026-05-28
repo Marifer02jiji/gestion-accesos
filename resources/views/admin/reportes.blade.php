@@ -64,7 +64,7 @@
                         onmouseover="this.style.backgroundColor='#FFF3EC'"
                         onmouseout="this.style.backgroundColor='transparent'">
                         <td class="px-4 py-2 font-mono font-bold" style="color: #DA7E2D;">
-                            VIS-{{ str_pad($s->id_solicitud, 4, '0', STR_PAD_LEFT) }}
+                            {{ $s->folio ?? '—' }}
                         </td>
                         <td class="px-4 py-2">{{ $s->solicitante->name ?? 'N/A' }}</td>
                         <td class="px-4 py-2">{{ $s->fecha_inicio }}</td>

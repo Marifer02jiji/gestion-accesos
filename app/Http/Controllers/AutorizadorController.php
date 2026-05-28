@@ -55,11 +55,8 @@ class AutorizadorController extends Controller
             $inicio = date('Y-m-d H:i:s', strtotime($solicitud->fecha_inicio . ' -' . $solicitud->tolerancia_antes . ' minutes'));
             $fin    = date('Y-m-d H:i:s', strtotime($solicitud->fecha_inicio . ' +' . $solicitud->tolerancia_despues . ' minutes'));
 
-            // Generar código numérico de 8 dígitos formato VIS-XXXX-XXXX (RNF02)
-            $codigoNumerico = self::generarCodigoQR();
-
             QR::create([
-                'codigo_numerico'        => $codigoNumerico,
+                'codigo_numerico'        => QR::generarCodigo(),
                 'vigencia_inicio'        => $inicio,
                 'vigencia_final'         => $fin,
                 'prorroga_tolerancia'    => false,
@@ -106,16 +103,4 @@ class AutorizadorController extends Controller
             ->with('success', 'Solicitud rechazada correctamente.');
     }
 
-    // ─── Generar código QR formato VIS-XXXX-XXXX (RNF02) ─────────
-
-    private static function generarCodigoQR(): string
-    {
-        do {
-            $parte1 = str_pad(mt_rand(0, 9999), 4, '0', STR_PAD_LEFT);
-            $parte2 = str_pad(mt_rand(0, 9999), 4, '0', STR_PAD_LEFT);
-            $codigo = "VIS-{$parte1}-{$parte2}";
-        } while (QR::where('codigo_numerico', $codigo)->exists());
-
-        return $codigo;
-    }
 }

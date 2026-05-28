@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Rules\AnticipacionMinimaVisita;
 use App\Models\Notificacion;
 use App\Models\QR;
 use App\Models\Solicitud;
@@ -87,7 +88,7 @@ class SolicitudApiController extends Controller
     public function store(Request $request)
     {
         $request->validate([
-            'fecha_inicio'           => 'required|date|after:now',
+            'fecha_inicio'           => ['required', 'date', new AnticipacionMinimaVisita(1)],
             'lugar_encuentro'        => 'required|string|max:100',
             'motivo_visita'          => 'required|string|max:255',
             'id_tipo_solicitud'      => 'required|exists:ca_TipoSolicitud,id_tipo_solicitud',
@@ -273,14 +274,8 @@ class SolicitudApiController extends Controller
                 strtotime($solicitud->fecha_inicio . ' +' . $solicitud->tolerancia_despues . ' minutes')
             );
 
-            do {
-                $parte1 = str_pad(mt_rand(0, 9999), 4, '0', STR_PAD_LEFT);
-                $parte2 = str_pad(mt_rand(0, 9999), 4, '0', STR_PAD_LEFT);
-                $codigo = "VIS-{$parte1}-{$parte2}";
-            } while (QR::where('codigo_numerico', $codigo)->exists());
-
             QR::create([
-                'codigo_numerico'        => $codigo,
+                'codigo_numerico'        => QR::generarCodigo(),
                 'vigencia_inicio'        => $inicio,
                 'vigencia_final'         => $fin,
                 'prorroga_tolerancia'    => false,

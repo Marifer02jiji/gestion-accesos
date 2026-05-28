@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests;
 
+use App\Rules\AnticipacionMinimaVisita;
 use Illuminate\Foundation\Http\FormRequest;
 
 class StoreSolicitudRequest extends FormRequest
@@ -14,7 +15,7 @@ class StoreSolicitudRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'fecha_inicio'          => 'required|date|after:now',
+            'fecha_inicio'          => ['required', 'date', new AnticipacionMinimaVisita(1)],
             'lugar_encuentro'       => 'required|string|max:100',
             'motivo_visita'         => 'required|string|min:5',
             'id_tipo_solicitud'     => 'required|exists:ca_TipoSolicitud,id_tipo_solicitud',
@@ -29,7 +30,6 @@ class StoreSolicitudRequest extends FormRequest
     {
         return [
             'fecha_inicio.required'          => 'El campo fecha y hora es obligatorio',
-            'fecha_inicio.after'             => 'La fecha debe ser posterior a la hora actual',
             'lugar_encuentro.required'       => 'El campo lugar de encuentro es obligatorio',
             'motivo_visita.required'         => 'El campo motivo de la visita es obligatorio',
             'id_tipo_solicitud.required'     => 'Seleccione el tipo de visitante',

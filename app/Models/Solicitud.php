@@ -60,13 +60,13 @@ class Solicitud extends Model
 
     // ─── Helpers ─────────────────────────────────────────────────
 
-    // Genera folio único VIS-XXXX-XXXX
+    // Folio de la solicitud: XXXX-XXXX (solo números)
     public static function generarFolio(): string
     {
         do {
-            $parte1 = strtoupper(substr(str_pad(mt_rand(0, 9999), 4, '0', STR_PAD_LEFT), 0, 4));
-            $parte2 = strtoupper(substr(str_pad(mt_rand(0, 9999), 4, '0', STR_PAD_LEFT), 0, 4));
-            $folio  = "VIS-{$parte1}-{$parte2}";
+            $parte1 = str_pad((string) mt_rand(0, 9999), 4, '0', STR_PAD_LEFT);
+            $parte2 = str_pad((string) mt_rand(0, 9999), 4, '0', STR_PAD_LEFT);
+            $folio  = "{$parte1}-{$parte2}";
         } while (self::where('folio', $folio)->exists());
 
         return $folio;

@@ -80,9 +80,12 @@
                     <label class="block text-sm font-semibold text-omg-slate mb-1">
                         <i class="fas fa-calendar mr-1"></i> Fecha y Hora
                     </label>
-                    <input type="datetime-local" name="fecha_inicio"
+                    <input type="datetime-local" name="fecha_inicio" id="fecha_inicio"
                         class="w-full border border-omg-kashmir rounded px-3 py-2 bg-omg-chardon focus:outline-none focus:ring-2 focus:ring-omg-nile"
                         value="{{ old('fecha_inicio') }}">
+                    <p class="text-xs text-omg-kashmir mt-1">
+                        Puedes agendar para hoy; mínimo 1 hora después de ahora.
+                    </p>
                     @error('fecha_inicio')
                         <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
                     @enderror
@@ -200,6 +203,18 @@
     </div>
 
     <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const input = document.getElementById('fecha_inicio');
+            if (!input) return;
+
+            const min = new Date();
+            min.setHours(min.getHours() + 1);
+            min.setSeconds(0, 0);
+
+            const pad = (n) => String(n).padStart(2, '0');
+            input.min = `${min.getFullYear()}-${pad(min.getMonth() + 1)}-${pad(min.getDate())}T${pad(min.getHours())}:${pad(min.getMinutes())}`;
+        });
+
         function actualizarDireccion() {
             const select = document.getElementById('tipo_solicitud');
             const option = select.options[select.selectedIndex];
