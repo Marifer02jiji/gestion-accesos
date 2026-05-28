@@ -12,19 +12,71 @@ use Illuminate\Http\Request;
 
 class SolicitudApiController extends Controller
 {
-    // Obtener ID del empleado SAM del usuario autenticado
     private function idEmpleado(): int
     {
         return auth()->user()->idSam();
     }
 
-    // Listar solicitudes del solicitante autenticado
-    public function index()
+    private function formatearSolicitudParaMovil($solicitud)
     {
-        $solicitudes = Solicitud::where('id_solicitante', $this->idEmpleado())
-            ->with(['estado', 'tipo', 'visitantes', 'solicitante'])
+        $solicitud->nombre_solicitante = $solicitud->solicitante->name
+            ?? $solicitud->solicitante->nombre
+            ?? 'Sin nombre';
+
+        $solicitud->correo_solicitante = $solicitud->solicitante->email
+            ?? '';
+
+        $solicitud->tipo_visita = $solicitud->tipo->nombre
+            ?? $solicitud->tipo->descripcion
+            ?? $this->mapearTipoSolicitud($solicitud->id_tipo_solicitud);
+
+        return $solicitud;
+    }
+
+    private function mapearTipoSolicitud($idTipo): string
+    {
+        return match ((int) $idTipo) {
+            1 => 'Proveedor',
+            2 => 'Institucional / Negocios',
+            3 => 'Personal',
+            default => 'Sin tipo',
+        };
+    }
+
+    public function index(Request $request)
+    {
+        $query = Solicitud::where('id_solicitante', $this->idEmpleado())
+            ->with([
+                'estado',
+                'tipo',
+                'visitantes',
+                'solicitante',
+            ]);
+
+        $estado = $request->get('estado');
+
+        if ($estado) {
+            $estado = strtolower($estado);
+
+            $mapaEstados = [
+                'pendiente'  => 1,
+                'autorizada' => 2,
+                'rechazada'  => 3,
+                'cancelada'  => 4,
+            ];
+
+            if (isset($mapaEstados[$estado])) {
+                $query->where('id_estado_solicitud', $mapaEstados[$estado]);
+            }
+        }
+
+        $solicitudes = $query
             ->orderBy('fecha_creacion', 'desc')
             ->paginate(10);
+
+        $solicitudes->getCollection()->transform(function ($solicitud) {
+            return $this->formatearSolicitudParaMovil($solicitud);
+        });
 
         return response()->json([
             'message' => 'Solicitudes obtenidas correctamente.',
@@ -32,20 +84,19 @@ class SolicitudApiController extends Controller
         ]);
     }
 
-    // Crear nueva solicitud
     public function store(Request $request)
     {
         $request->validate([
-            'fecha_inicio'          => 'required|date|after:now',
-            'lugar_encuentro'       => 'required|string|max:100',
-            'motivo_visita'         => 'required|string|max:255',
-            'id_tipo_solicitud'     => 'required|exists:ca_TipoSolicitud,id_tipo_solicitud',
-            'tolerancia_antes'      => 'required|in:15,30',
-            'tolerancia_despues'    => 'required|in:15,30',
-            'visitantes'            => 'required|array|min:1',
-            'visitantes.*.nombre'   => 'required|string|max:100',
-            'visitantes.*.apellidos'=> 'required|string|max:100',
-            'visitantes.*.correo'   => 'required|email|max:150',
+            'fecha_inicio'           => 'required|date|after:now',
+            'lugar_encuentro'        => 'required|string|max:100',
+            'motivo_visita'          => 'required|string|max:255',
+            'id_tipo_solicitud'      => 'required|exists:ca_TipoSolicitud,id_tipo_solicitud',
+            'tolerancia_antes'       => 'required|in:15,30',
+            'tolerancia_despues'     => 'required|in:15,30',
+            'visitantes'             => 'required|array|min:1',
+            'visitantes.*.nombre'    => 'required|string|max:100',
+            'visitantes.*.apellidos' => 'required|string|max:100',
+            'visitantes.*.correo'    => 'required|email|max:150',
         ]);
 
         $solicitud = Solicitud::create([
@@ -76,17 +127,32 @@ class SolicitudApiController extends Controller
             ]);
         }
 
+        $solicitud = Solicitud::with([
+            'estado',
+            'tipo',
+            'visitantes',
+            'solicitante',
+        ])->findOrFail($solicitud->id_solicitud);
+
+        $this->formatearSolicitudParaMovil($solicitud);
+
         return response()->json([
             'message' => 'Solicitud creada correctamente.',
-            'data'    => $solicitud->load(['estado', 'tipo', 'visitantes', 'solicitante']),
+            'data'    => $solicitud,
         ], 201);
     }
 
-    // Ver detalle de solicitud
     public function show($id)
     {
-        $solicitud = Solicitud::with(['estado', 'tipo', 'visitantes', 'solicitudVisitantes.qr', 'solicitante'])
-            ->findOrFail($id);
+        $solicitud = Solicitud::with([
+            'estado',
+            'tipo',
+            'visitantes',
+            'solicitudVisitantes.qr',
+            'solicitante',
+        ])->findOrFail($id);
+
+        $this->formatearSolicitudParaMovil($solicitud);
 
         return response()->json([
             'message' => 'Solicitud obtenida correctamente.',
@@ -94,7 +160,6 @@ class SolicitudApiController extends Controller
         ]);
     }
 
-    // Cancelar solicitud
     public function cancelar($id)
     {
         $solicitud = Solicitud::with('solicitudVisitantes.qr')->findOrFail($id);
@@ -106,7 +171,6 @@ class SolicitudApiController extends Controller
             ], 422);
         }
 
-        // Cancelar QRs activos
         foreach ($solicitud->solicitudVisitantes as $sv) {
             if ($sv->qr && $sv->qr->id_estadoQr === 1) {
                 $sv->qr->update(['id_estadoQr' => 4]);
@@ -121,11 +185,10 @@ class SolicitudApiController extends Controller
 
         return response()->json([
             'message' => 'Solicitud cancelada correctamente.',
-            'data'    => $solicitud->load(['solicitante']),
+            'data'    => $solicitud,
         ]);
     }
 
-    // Ver QR de solicitud autorizada
     public function qr($id)
     {
         $solicitud = Solicitud::with('solicitudVisitantes.qr')->findOrFail($id);
@@ -137,9 +200,12 @@ class SolicitudApiController extends Controller
             ], 422);
         }
 
-        $qrs = $solicitud->solicitudVisitantes->map(function($sv) {
-            return $sv->qr;
-        })->filter();
+        $qrs = $solicitud->solicitudVisitantes
+            ->map(function ($sv) {
+                return $sv->qr;
+            })
+            ->filter()
+            ->values();
 
         return response()->json([
             'message' => 'QR obtenido correctamente.',
@@ -147,21 +213,31 @@ class SolicitudApiController extends Controller
         ]);
     }
 
-    // Listar solicitudes pendientes (autorizador)
     public function pendientes(Request $request)
     {
         $filtro = $request->get('filtro', 'pendientes');
 
-        $query = Solicitud::with(['estado', 'tipo', 'visitantes', 'solicitante']);
+        $query = Solicitud::with([
+            'estado',
+            'tipo',
+            'visitantes',
+            'solicitante',
+        ]);
 
-        match($filtro) {
+        match ($filtro) {
             'aprobadas'  => $query->where('id_estado_solicitud', 2),
             'rechazadas' => $query->where('id_estado_solicitud', 3),
             'todos'      => null,
             default      => $query->where('id_estado_solicitud', 1),
         };
 
-        $solicitudes = $query->orderBy('fecha_creacion', 'desc')->paginate(10);
+        $solicitudes = $query
+            ->orderBy('fecha_creacion', 'desc')
+            ->paginate(10);
+
+        $solicitudes->getCollection()->transform(function ($solicitud) {
+            return $this->formatearSolicitudParaMovil($solicitud);
+        });
 
         return response()->json([
             'message' => 'Solicitudes obtenidas correctamente.',
@@ -169,7 +245,6 @@ class SolicitudApiController extends Controller
         ]);
     }
 
-    // Autorizar solicitud
     public function autorizar($id)
     {
         $solicitud = Solicitud::with('solicitudVisitantes.visitante')->findOrFail($id);
@@ -184,14 +259,25 @@ class SolicitudApiController extends Controller
         $solicitud->update(['id_estado_solicitud' => 2]);
 
         foreach ($solicitud->solicitudVisitantes as $sv) {
-            if ($sv->qr) continue;
+            if ($sv->qr) {
+                continue;
+            }
 
-            $inicio = date('Y-m-d H:i:s', strtotime($solicitud->fecha_inicio . ' -' . $solicitud->tolerancia_antes . ' minutes'));
-            $fin    = date('Y-m-d H:i:s', strtotime($solicitud->fecha_inicio . ' +' . $solicitud->tolerancia_despues . ' minutes'));
+            $inicio = date(
+                'Y-m-d H:i:s',
+                strtotime($solicitud->fecha_inicio . ' -' . $solicitud->tolerancia_antes . ' minutes')
+            );
 
-            $parte1 = str_pad(mt_rand(0, 9999), 4, '0', STR_PAD_LEFT);
-            $parte2 = str_pad(mt_rand(0, 9999), 4, '0', STR_PAD_LEFT);
-            $codigo = "VIS-{$parte1}-{$parte2}";
+            $fin = date(
+                'Y-m-d H:i:s',
+                strtotime($solicitud->fecha_inicio . ' +' . $solicitud->tolerancia_despues . ' minutes')
+            );
+
+            do {
+                $parte1 = str_pad(mt_rand(0, 9999), 4, '0', STR_PAD_LEFT);
+                $parte2 = str_pad(mt_rand(0, 9999), 4, '0', STR_PAD_LEFT);
+                $codigo = "VIS-{$parte1}-{$parte2}";
+            } while (QR::where('codigo_numerico', $codigo)->exists());
 
             QR::create([
                 'codigo_numerico'        => $codigo,
@@ -211,13 +297,21 @@ class SolicitudApiController extends Controller
             'leida'        => false,
         ]);
 
+        $solicitud = Solicitud::with([
+            'estado',
+            'tipo',
+            'visitantes',
+            'solicitante',
+        ])->findOrFail($id);
+
+        $this->formatearSolicitudParaMovil($solicitud);
+
         return response()->json([
             'message' => 'Solicitud autorizada correctamente.',
-            'data'    => $solicitud->load(['solicitante']),
+            'data'    => $solicitud,
         ]);
     }
 
-    // Rechazar solicitud
     public function rechazar($id)
     {
         $solicitud = Solicitud::findOrFail($id);
@@ -239,9 +333,18 @@ class SolicitudApiController extends Controller
             'leida'        => false,
         ]);
 
+        $solicitud = Solicitud::with([
+            'estado',
+            'tipo',
+            'visitantes',
+            'solicitante',
+        ])->findOrFail($id);
+
+        $this->formatearSolicitudParaMovil($solicitud);
+
         return response()->json([
             'message' => 'Solicitud rechazada correctamente.',
-            'data'    => $solicitud->load(['solicitante']),
+            'data'    => $solicitud,
         ]);
     }
 }
