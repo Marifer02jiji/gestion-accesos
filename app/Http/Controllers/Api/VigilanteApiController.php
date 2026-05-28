@@ -213,73 +213,78 @@ class VigilanteApiController extends Controller
         return response()->json(['data' => $visitas]);
     }
 
-    // =========================================================================
-    // ESCANEAR QR
-    // POST /api/vigilante/escanear
-    // Body: { "codigo_qr": "VIS-0000-0000" }
-    // =========================================================================
-    public function escanear(Request $request)
-    {
-        $validador = Validator::make($request->all(), [
-            'codigo_qr' => ['required', 'string'],
-        ]);
+    // VigilanteApiController.php
 
-        if ($validador->fails()) {
-            return response()->json([
-                'message' => 'Los datos provistos son inválidos.',
-                'errors'  => $validador->errors(),
-            ], 422);
-        }
+public function escanear(Request $request)
+{
+    $request->validate(['codigo_qr' => 'required|string']);
 
-        $qr = QR::where('codigo_numerico', $request->codigo_qr)
-            ->with([
-                'solicitudVisitante.visitante',
-                'solicitudVisitante.solicitud',
-            ])
-            ->first();
+    $qr = QR::where('codigo_numerico', $request->codigo_qr)
+        ->with([
+            'solicitudVisitante.visitante',
+            'solicitudVisitante.solicitud',
+        ])
+        ->first();
 
-        if (!$qr) {
-            return response()->json(['message' => 'Código QR no encontrado.'], 404);
-        }
-
-        if ($qr->id_estadoQr == 4) {
-            return response()->json(['message' => 'Este código QR fue cancelado.'], 422);
-        }
-
-        if (now() < $qr->vigencia_inicio || now() > $qr->vigencia_final) {
-            return response()->json(['message' => 'El QR ha expirado o aún no es válido.'], 422);
-        }
-
-        $registro = RegistroAcceso::where('id_qr', $qr->id_qr)
-            ->orderByDesc('id_registro')
-            ->first();
-
-        $accionDisponible = 'entrada';
-
-        if ($registro?->hora_llegada_institucion && !$registro?->hora_salida_institucion) {
-            $accionDisponible = 'salida';
-        }
-
-        $visitante = $qr->solicitudVisitante->visitante;
-        $solicitud = $qr->solicitudVisitante->solicitud;
-
+    if (!$qr) {
         return response()->json([
-            'data' => [
-                'id_qr'             => $qr->id_qr,
-                'accion_disponible' => $accionDisponible,
-                'visitante' => [
-                    'nombre'          => $visitante->nombre,
-                    'apellidos'       => $visitante->apellidos,
-                    'correo_personal' => $visitante->correo_personal,
-                ],
-                'solicitud' => [
-                    'motivo_visita'   => $solicitud->motivo_visita,
-                    'vigencia_inicio' => $qr->vigencia_inicio,
-                    'vigencia_final'  => $qr->vigencia_final,
-                ],
-            ],
-        ]);
+            'message' => 'Código QR no encontrado. Verifica que el código sea correcto.'
+        ], 404);
     }
+
+    if ($qr->id_estadoQr == 4) {
+        return response()->json([
+            'message' => 'Este código QR fue cancelado y ya no es válido.'
+        ], 422);
+    }
+
+    // ── CORRECCIÓN PRINCIPAL: comparar con Carbon correctamente ──
+    $ahora  = now();
+    $inicio = \Carbon\Carbon::parse($qr->vigencia_inicio);
+    $fin    = \Carbon\Carbon::parse($qr->vigencia_final);
+
+    if ($ahora->lt($inicio)) {
+        return response()->json([
+            'message' => "Este QR aún no es válido. Válido desde: {$inicio->format('d/m/Y H:i')}."
+        ], 422);
+    }
+
+    if ($ahora->gt($fin)) {
+        return response()->json([
+            'message' => "Este QR expiró el {$fin->format('d/m/Y H:i')}."
+        ], 422);
+    }
+
+    $registro = RegistroAcceso::where('id_qr', $qr->id_qr)
+        ->orderByDesc('id_registro')
+        ->first();
+
+    $accionDisponible = 'entrada';
+    if ($registro?->hora_llegada_institucion && !$registro?->hora_salida_institucion) {
+        $accionDisponible = 'salida';
+    }
+
+    $visitante = $qr->solicitudVisitante->visitante;
+    $solicitud = $qr->solicitudVisitante->solicitud;
+
+    return response()->json([
+        'data' => [
+            'id_qr'             => $qr->id_qr,
+            'accion_disponible' => $accionDisponible,
+            'acceso_concedido'  => true,          // ← añadir este campo
+            'visitante' => [
+                'nombre'          => $visitante->nombre,
+                'apellidos'       => $visitante->apellidos,
+                'correo_personal' => $visitante->correo_personal,
+            ],
+            'solicitud' => [
+                'motivo_visita'   => $solicitud->motivo_visita,
+                'vigencia_inicio' => $qr->vigencia_inicio,
+                'vigencia_final'  => $qr->vigencia_final,
+            ],
+        ],
+    ]);
+}
 
     // =========================================================================
     // REGISTRAR ENTRADA
