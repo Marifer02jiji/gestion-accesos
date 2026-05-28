@@ -17,8 +17,12 @@ namespace App\Http\Controllers\Api;
 use App\Models\QR;
 use App\Models\RegistroAcceso;
 use App\Models\Solicitud;
+use App\Models\SolicitudVisitante;
+use App\Models\Visitante;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Validator;
 
 class VigilanteApiController extends Controller
 {
@@ -26,31 +30,154 @@ class VigilanteApiController extends Controller
     // "LOGIN" — solo valida formato, no consulta BD
     // POST /api/vigilante/login
     // Body: { "telefono": "1234567890", "area": "Entrada vehicular 1" }
-    //
-    // Flutter guarda teléfono y área localmente.
-    // No se crea ningún registro aquí.
+
     // =========================================================================
-    
-public function login(Request $request)
+    public function login(Request $request)
+    {
+        $validador = Validator::make($request->all(), [
+            'telefono' => ['required', 'string', 'digits:10'],
+            'area'     => ['required', 'string', 'max:100'],
+        ]);
+
+        if ($validador->fails()) {
+            return response()->json([
+                'message' => 'Los datos provistos son inválidos.',
+                'errors'  => $validador->errors(),
+            ], 422);
+        }
+
+        return response()->json([
+            'message' => 'Identificación registrada.',
+            'data' => [
+                'token'           => 'vigilante-local',
+                'rol'             => 'vigilante',
+                'nombre'          => 'Vigilante',
+                'name'            => 'Vigilante',
+                'email'           => '',
+                'departamento'    => $request->area,
+                'id_empleado_sam' => 0,
+                'id_departamento' => 0,
+                'rol_api'         => 'vigilante',
+                'telefono'        => $request->telefono,
+                'area'            => $request->area,
+            ],
+        ]);
+    }
+
+    // =========================================================================
+// REGISTRAR VISITA DE CONSULTA
+// POST /api/vigilante/consulta
+// Body:
+// {
+//   "nombre_visitante": "Ana López García",
+//   "correo_visitante": "ana@gmail.com",
+//   "lugar_destino": "Desarrollo Académico"
+// }
+// =========================================================================
+public function registrarConsulta(Request $request)
 {
-    $request->validate([
-        'telefono' => 'required|digits:10',
-        'area'     => 'required|string|max:100',
+    $validador = Validator::make($request->all(), [
+        'nombre_visitante' => ['required', 'string', 'min:5', 'max:150'],
+        'correo_visitante' => ['required', 'email', 'max:150'],
+        'lugar_destino'    => ['required', 'string', 'max:100'],
     ]);
 
-    return response()->json([
-        'data' => [
-            'token'           => '',
-            'rol'             => 'vigilante',
-            'name'            => 'Vigilante',
-            'email'           => $request->telefono,
-            'departamento'    => $request->area,
-            'id_empleado_sam' => 0,
-            'id_departamento' => 0,
-            'rol_api'         => 'vigilante',
-        ],
-    ]);
+    if ($validador->fails()) {
+        return response()->json([
+            'message' => 'Los datos provistos son inválidos.',
+            'errors'  => $validador->errors(),
+        ], 422);
+    }
+
+    $lugaresPermitidos = [
+        'División de Comunicación y Difusión',
+        'Desarrollo Académico',
+    ];
+
+    if (!in_array($request->lugar_destino, $lugaresPermitidos)) {
+        return response()->json([
+            'message' => 'El lugar destino no es válido.',
+        ], 422);
+    }
+
+    try {
+        $resultado = DB::transaction(function () use ($request) {
+            $nombreCompleto = trim($request->nombre_visitante);
+            $partesNombre = preg_split('/\s+/', $nombreCompleto);
+
+            $nombre = array_shift($partesNombre);
+            $apellidos = trim(implode(' ', $partesNombre));
+
+            if ($apellidos === '') {
+                $apellidos = 'No especificado';
+            }
+
+            // El correo es UNIQUE en la tabla visitante,
+            // por eso buscamos primero antes de crear.
+            $visitante = Visitante::firstOrCreate(
+                [
+                    'correo_personal' => $request->correo_visitante,
+                ],
+                [
+                    'nombre'              => $nombre,
+                    'apellidos'           => $apellidos,
+                    'id_estado_visitante' => null,
+                ]
+            );
+
+            $folio = Solicitud::generarFolio();
+
+            $solicitud = Solicitud::create([
+                'folio'               => $folio,
+                'fecha_inicio'        => now(),
+                'tolerancia_antes'    => 0,
+                'tolerancia_despues'  => 120,
+                'lugar_encuentro'     => $request->lugar_destino,
+                'numero_visitantes'   => 1,
+                'motivo_visita'       => 'Visita espontánea de consulta',
+                'id_estado_solicitud' => 2, // Autorizada
+                'id_tipo_solicitud'   => 4, // Consulta
+                'id_autorizador'      => null,
+                'id_solicitante'      => 0, // Sin solicitante real, pero la BD no permite NULL
+            ]);
+
+            $solicitudVisitante = SolicitudVisitante::create([
+                'id_visitante' => $visitante->id_visitante,
+                'id_solicitud' => $solicitud->id_solicitud,
+            ]);
+
+            $codigoQr = $folio;
+
+            QR::create([
+                'codigo_numerico'        => $codigoQr,
+                'vigencia_inicio'        => now(),
+                'vigencia_final'         => now()->addHours(2),
+                'prorroga_tolerancia'    => 0,
+                'id_estadoQr'            => 1, // Activo
+                'id_solicitud_visitante' => $solicitudVisitante->id_solicitud_visitante,
+            ]);
+
+            return [
+                'folio'            => $solicitud->folio,
+                'codigo_qr'        => $codigoQr,
+                'nombre_visitante' => trim($visitante->nombre . ' ' . $visitante->apellidos),
+                'correo_visitante' => $visitante->correo_personal,
+                'lugar_destino'    => $solicitud->lugar_encuentro,
+            ];
+        });
+
+        return response()->json([
+            'message' => 'Visita de consulta registrada correctamente.',
+            'data'    => $resultado,
+        ], 201);
+    } catch (\Throwable $e) {
+        return response()->json([
+            'message' => 'No fue posible registrar la visita de consulta.',
+            'error'   => $e->getMessage(),
+        ], 500);
+    }
 }
+
     // =========================================================================
     // VISITAS DEL DÍA
     // GET /api/vigilante/visitas-hoy
@@ -224,7 +351,7 @@ public function login(Request $request)
     }
 
     // =========================================================================
-    // HISTORIAL
+    // HISTORIAL de visitas
     // GET /api/vigilante/historial
     // =========================================================================
     public function historial()
