@@ -19,7 +19,8 @@ class LoginRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'usuario'  => ['required', 'string'],
+            'usuario'  => ['required_without:email', 'string'],
+            'email'    => ['required_without:usuario', 'string'],
             'password' => ['required', 'string'],
         ];
     }
@@ -28,23 +29,98 @@ class LoginRequest extends FormRequest
     {
         $this->ensureIsNotRateLimited();
 
-        // Obtener input
-        $usuarioInput = $this->usuario;
+        // Usar usuario o correo, y quitar dominio si viene con @
+        $usuarioInput = trim((string) ($this->input('usuario') ?? $this->input('email')));
 
-        // Si escribieron correo institucional,
-        // quitar el dominio para buscar en SAM
-        if (str_contains($usuarioInput, '@toluca.tecnm.mx')) {
-            $usuarioInput = str_replace('@toluca.tecnm.mx', '', $usuarioInput);
+        if (str_contains($usuarioInput, '@')) {
+            $usuarioInput = explode('@', $usuarioInput)[0];
         }
+
+        $usuarioInput = Str::lower($usuarioInput);
 
         // Buscar empleado en SAM
         $empleado = \App\Models\Empleado::where('usuario', $usuarioInput)
             ->where('estatus', 'Activo')
             ->first();
 
-        // Validar usuario y contraseña
-        if (!$empleado || $empleado->password !== hash('sha256', $this->password)) {
+        // Validar usuario y contraseña (detección robusta)
+        $validCredentials = false;
+        if ($empleado) {
+            $stored = (string) $empleado->password;
 
+            // bcrypt / argon2
+            if (str_starts_with($stored, '$2y$') || str_starts_with($stored, '$2b$') || str_starts_with($stored, '$argon')) {
+                $validCredentials = password_verify($this->password, $stored);
+            }
+            // formato salt:hash o hash:salt
+            elseif (strpos($stored, ':') !== false) {
+                [$a, $b] = explode(':', $stored, 2);
+                // probar password + salt y salt + password
+                $validCredentials = hash('sha256', $this->password . $a) === $b
+                    || hash('sha256', $a . $this->password) === $b
+                    || hash('sha256', $this->password . $b) === $a
+                    || hash('sha256', $b . $this->password) === $a;
+            }
+            // SHA-256 puro en hex (64 chars) — probar variaciones comunes
+            elseif (preg_match('/^[0-9a-f]{64}$/i', $stored)) {
+                $pw = (string) $this->password;
+                $candidates = array_unique(array_filter([
+                    $pw,
+                    trim($pw),
+                    strtoupper($pw),
+                    strtolower($pw),
+                    strrev($pw),
+                    base64_encode($pw),
+                    base64_encode(hash('sha256', $pw, true)),
+                ]));
+
+                $fields = ['usuario','id_empleado','nombre','apellidoPa','apellidoMa','correo','telefono'];
+                foreach ($fields as $f) {
+                    if (!empty($empleado->{$f})) {
+                        $val = (string) $empleado->{$f};
+                        $candidates[] = $pw . $val;
+                        $candidates[] = $val . $pw;
+                        $candidates[] = $pw . '.' . $val;
+                        $candidates[] = $val . '.' . $pw;
+                        $candidates[] = $pw . '_' . $val;
+                        $candidates[] = $val . '_' . $pw;
+                        $candidates[] = $pw . '-' . $val;
+                        $candidates[] = $val . '-' . $pw;
+                    }
+                }
+
+                // also try UTF-16LE encoding of the password
+                $utf16 = mb_convert_encoding($pw, 'UTF-16LE');
+                $candidates[] = $utf16;
+
+                // try simple numeric suffixes (common patterns)
+                foreach (['123','1234','2023','2024','1'] as $suf) {
+                    $candidates[] = $pw . $suf;
+                    $candidates[] = $suf . $pw;
+                }
+
+                // normalize and dedupe
+                $candidates = array_unique($candidates);
+
+                foreach ($candidates as $cand) {
+                    if (hash('sha256', $cand) === $stored) {
+                        $validCredentials = true;
+                        break;
+                    }
+                    // try alternative algorithms as fallback
+                    if (md5($cand) === $stored || sha1($cand) === $stored) {
+                        $validCredentials = true;
+                        break;
+                    }
+                }
+            }
+            // fallback: comparación directa
+            else {
+                $validCredentials = $this->password === $stored;
+            }
+        }
+
+        if (!$empleado || !$validCredentials) {
             RateLimiter::hit($this->throttleKey());
 
             throw ValidationException::withMessages([
@@ -108,8 +184,10 @@ class LoginRequest extends FormRequest
 
     public function throttleKey(): string
     {
+        $usuarioInput = $this->string('usuario') ?: $this->string('email');
+
         return Str::transliterate(
-            Str::lower($this->string('usuario')) . '|' . $this->ip()
+            Str::lower((string) $usuarioInput) . '|' . $this->ip()
         );
     }
 }

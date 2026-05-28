@@ -40,7 +40,7 @@
                         <i class="fas fa-user mr-1"></i> Usuario
                     </label>
                     <input type="text" name="usuario" value="{{ old('usuario') }}" autofocus
-                        placeholder="Tu usuario del SAM"
+                        placeholder="Usuario o correo institucional"
                         class="w-full border border-omg-kashmir rounded-lg px-3 py-2 bg-omg-chardon focus:outline-none focus:ring-2 focus:ring-omg-nile">
                 </div>
 

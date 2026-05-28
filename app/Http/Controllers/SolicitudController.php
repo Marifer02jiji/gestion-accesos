@@ -107,6 +107,26 @@ class SolicitudController extends Controller
             ->with('success', 'Solicitud cancelada correctamente.');
     }
 
+    public function enviarQR($id)
+    {
+        $solicitud = Solicitud::with('solicitudVisitantes.qr')->findOrFail($id);
+
+        if ($solicitud->id_estado_solicitud !== 2) {
+            return redirect()->route('solicitudes.show', $id)
+                ->with('error', 'Solo se puede enviar el QR cuando la solicitud está autorizada.');
+        }
+
+        $qr = $solicitud->solicitudVisitantes->first()?->qr;
+
+        if (!$qr) {
+            return redirect()->route('solicitudes.show', $id)
+                ->with('error', 'No se encontró un QR asociado a esta solicitud.');
+        }
+
+        return redirect()->route('solicitudes.qr', $id)
+            ->with('success', 'QR listo para compartir con el visitante.');
+    }
+
     // Eliminar solicitud cancelada o rechazada
     public function destroy($id)
     {
