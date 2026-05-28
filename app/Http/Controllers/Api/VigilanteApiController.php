@@ -30,45 +30,27 @@ class VigilanteApiController extends Controller
     // Flutter guarda teléfono y área localmente.
     // No se crea ningún registro aquí.
     // =========================================================================
-// =========================================================================
-    // "LOGIN" — solo valida formato, no consulta BD
-    // POST /api/vigilante/login
-    // =========================================================================
-    public function login(Request $request)
-    {
-        // Forzamos la validación manual para evitar redirecciones raras (Error 500)
-        $validador = \Illuminate\Support\Facades\Validator::make($request->all(), [
-            'telefono' => ['required', 'string', 'digits:10'],
-            'area'     => ['required', 'string', 'max:100'],
-        ]);
+    
+public function login(Request $request)
+{
+    $request->validate([
+        'telefono' => 'required|digits:10',
+        'area'     => 'required|string|max:100',
+    ]);
 
-        // Si los datos enviados desde Flutter no cumplen con el formato, mandamos la respuesta correcta
-        if ($validador->fails()) {
-            return response()->json([
-                'message' => 'Los datos provistos son inválidos.',
-                'errors'  => $validador->errors()
-            ], 422);
-        }
-
-        // Si la validación pasa, devolvemos el payload para Flutter
-        return response()->json([
-            'message' => 'Identificación registrada.',
-            'data' => [
-                'token'           => 'vigilante-local',
-                'rol'             => 'vigilante',
-                'nombre'          => 'Vigilante',
-                'name'            => 'Vigilante',
-                'email'           => '',
-                'departamento'    => $request->area,
-                'id_empleado_sam' => 0,
-                'id_departamento' => 0,
-                'rol_api'         => 'vigilante',
-                'telefono'        => $request->telefono,
-                'area'            => $request->area,
-            ],
-        ]);
-    }    
-
+    return response()->json([
+        'data' => [
+            'token'           => '',
+            'rol'             => 'vigilante',
+            'name'            => 'Vigilante',
+            'email'           => $request->telefono,
+            'departamento'    => $request->area,
+            'id_empleado_sam' => 0,
+            'id_departamento' => 0,
+            'rol_api'         => 'vigilante',
+        ],
+    ]);
+}
     // =========================================================================
     // VISITAS DEL DÍA
     // GET /api/vigilante/visitas-hoy
