@@ -39,7 +39,7 @@ class NotificacionController extends Controller
 
     public function marcarTodasLeidas()
     {
-        Notificacion::where('id_empleado', Auth::id())
+        Notificacion::where('id_empleado', Auth::user()->idSam())
             ->where('leida', false)
             ->update(['leida' => true]);
 

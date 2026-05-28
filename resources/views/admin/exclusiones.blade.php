@@ -12,7 +12,8 @@
         @endif
 
         <div class="bg-white shadow-sm rounded-xl p-6">
-            <h3 class="text-lg font-heading font-semibold text-omg-nile mb-4 border-b border-omg-kashmir pb-2 flex items-center gap-2">
+            <h3 class="text-lg font-heading font-semibold text-white mb-4 pb-2 flex items-center gap-2 px-3 py-2 rounded-lg"
+                style="background-color: #E26A23;">
                 <i class="fas fa-user-slash"></i> Agregar a Lista de Exclusión
             </h3>
             <form action="{{ route('admin.exclusiones.store') }}" method="POST">
@@ -23,7 +24,8 @@
                             <i class="fas fa-user mr-1"></i> Visitante
                         </label>
                         <select name="id_visitante"
-                            class="w-full border border-omg-kashmir rounded px-3 py-2 bg-omg-chardon focus:outline-none focus:ring-2 focus:ring-omg-nile">
+                            class="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2"
+                            style="border-color: #A9AAAD; background-color: #FFF3EC; focus-ring-color: #DA7E2D;">
                             <option value="">Seleccione un visitante</option>
                             @foreach($visitantes as $v)
                                 <option value="{{ $v->id_visitante }}">
@@ -41,7 +43,8 @@
                         </label>
                         <textarea name="motivo_exclusion" rows="2"
                             placeholder="Mínimo 10 caracteres"
-                            class="w-full border border-omg-kashmir rounded px-3 py-2 bg-omg-chardon focus:outline-none focus:ring-2 focus:ring-omg-nile"></textarea>
+                            class="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2"
+                            style="border-color: #A9AAAD; background-color: #FFF3EC;"></textarea>
                         @error('motivo_exclusion')
                             <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
                         @enderror
@@ -57,11 +60,12 @@
         </div>
 
         <div class="bg-white shadow-sm rounded-xl p-6">
-            <h3 class="text-lg font-heading font-semibold text-omg-nile mb-4 border-b border-omg-kashmir pb-2 flex items-center gap-2">
+            <h3 class="text-lg font-heading font-semibold text-white mb-4 pb-2 flex items-center gap-2 px-3 py-2 rounded-lg"
+                style="background-color: #E26A23;">
                 <i class="fas fa-list"></i> Visitantes Bloqueados
             </h3>
             <table class="w-full text-sm text-left border">
-                <thead class="bg-omg-nile text-white">
+                <thead class="text-white" style="background-color: #E26A23;">
                     <tr>
                         <th class="px-4 py-2">Visitante</th>
                         <th class="px-4 py-2">Correo</th>
@@ -72,7 +76,9 @@
                 </thead>
                 <tbody>
                     @forelse($exclusiones as $e)
-                    <tr class="hover:bg-omg-chardon border-b">
+                    <tr class="border-b"
+                        onmouseover="this.style.backgroundColor='#FFF3EC'"
+                        onmouseout="this.style.backgroundColor='transparent'">
                         <td class="px-4 py-2">{{ $e->visitante->nombre }} {{ $e->visitante->apellidos }}</td>
                         <td class="px-4 py-2">{{ $e->visitante->correo_personal }}</td>
                         <td class="px-4 py-2">{{ $e->motivo_exclusion }}</td>

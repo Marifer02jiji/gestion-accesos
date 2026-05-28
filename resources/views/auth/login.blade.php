@@ -9,8 +9,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Montserrat:wght@600;700&display=swap" rel="stylesheet">
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
-<body class="bg-omg-nile min-h-screen flex items-center justify-center">
-
+<body class="min-h-screen flex items-center justify-center" style="background: linear-gradient(135deg, #F29066 0%, #3B5675 100%);">
     <div class="w-full max-w-md">
 
         <div class="text-center mb-8">

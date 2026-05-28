@@ -22,18 +22,19 @@
             {{-- Barra superior --}}
             <div class="flex justify-between items-center mb-6">
                 <h3 class="text-lg font-heading font-semibold text-omg-slate flex items-center gap-2">
-                    <i class="fas fa-list text-omg-nile"></i>
+                    <i class="fas fa-list" style="color: #DA7E2D;"></i>
                     Lista de Solicitudes
                 </h3>
                 <a href="{{ route('solicitudes.create') }}"
-                   class="bg-omg-coral text-white px-4 py-2 rounded hover:opacity-90 font-heading font-semibold flex items-center gap-2">
+                   class="text-white px-4 py-2 rounded hover:opacity-90 font-heading font-semibold flex items-center gap-2"
+                   style="background-color: #DA7E2D;">
                     <i class="fas fa-plus"></i> Nueva Solicitud
                 </a>
             </div>
 
             {{-- Tabla --}}
             <table class="w-full text-sm text-left border">
-                <thead class="bg-omg-nile text-white">
+                <thead class="text-white" style="background-color: #E26A23;">
                     <tr>
                         <th class="px-4 py-2">#</th>
                         <th class="px-4 py-2">Fecha</th>
@@ -45,7 +46,9 @@
                 </thead>
                 <tbody>
                     @forelse($solicitudes as $s)
-                    <tr class="hover:bg-omg-chardon border-b">
+                    <tr class="border-b" style="transition: background 0.2s;"
+                        onmouseover="this.style.backgroundColor='#FFF3EC'"
+                        onmouseout="this.style.backgroundColor='transparent'">
                         <td class="px-4 py-2">{{ $s->id_solicitud }}</td>
                         <td class="px-4 py-2">{{ $s->fecha_inicio }}</td>
                         <td class="px-4 py-2">{{ $s->lugar_encuentro }}</td>
@@ -62,7 +65,8 @@
                         <td class="px-4 py-2">
                             <div class="flex gap-2">
                                 <a href="{{ route('solicitudes.show', $s->id_solicitud) }}"
-                                   class="bg-omg-nile text-white px-3 py-1 rounded hover:opacity-90 text-xs flex items-center gap-1">
+                                   class="text-white px-3 py-1 rounded hover:opacity-90 text-xs flex items-center gap-1"
+                                   style="background-color: #DA7E2D;">
                                     <i class="fas fa-eye"></i> Ver
                                 </a>
                                 @if(in_array($s->estado->nombre, ['Cancelada', 'Rechazada']))

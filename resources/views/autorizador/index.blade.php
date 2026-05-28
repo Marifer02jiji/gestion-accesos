@@ -18,44 +18,45 @@
                     <i class="fas fa-filter"></i> Filtrar:
                 </span>
                 <a href="{{ route('autorizador.index', ['filtro' => 'todos']) }}"
-                   class="px-4 py-1 rounded-full text-sm font-semibold transition
-                   {{ $filtro == 'todos' ? 'bg-omg-nile text-white' : 'border border-omg-kashmir text-omg-nile hover:bg-omg-chardon' }}">
+                   class="px-4 py-1 rounded-full text-sm font-semibold transition"
+                   style="{{ $filtro == 'todos' ? 'background-color:#DA7E2D; color:white;' : 'border:1px solid #A9AAAD; color:#DA7E2D;' }}">
                     <i class="fas fa-list mr-1"></i> Todos
                 </a>
                 <a href="{{ route('autorizador.index', ['filtro' => 'pendientes']) }}"
                    class="px-4 py-1 rounded-full text-sm font-semibold transition
-                   {{ $filtro == 'pendientes' ? 'bg-yellow-500 text-white' : 'border border-omg-kashmir text-omg-nile hover:bg-omg-chardon' }}">
+                   {{ $filtro == 'pendientes' ? 'bg-yellow-500 text-white' : 'border border-gray-300 text-omg-slate hover:bg-orange-50' }}">
                     <i class="fas fa-clock mr-1"></i> Pendientes
                 </a>
                 <a href="{{ route('autorizador.index', ['filtro' => 'aprobadas']) }}"
                    class="px-4 py-1 rounded-full text-sm font-semibold transition
-                   {{ $filtro == 'aprobadas' ? 'bg-green-500 text-white' : 'border border-omg-kashmir text-omg-nile hover:bg-omg-chardon' }}">
+                   {{ $filtro == 'aprobadas' ? 'bg-green-500 text-white' : 'border border-gray-300 text-omg-slate hover:bg-orange-50' }}">
                     <i class="fas fa-check-circle mr-1"></i> Aprobadas
                 </a>
                 <a href="{{ route('autorizador.index', ['filtro' => 'rechazadas']) }}"
                    class="px-4 py-1 rounded-full text-sm font-semibold transition
-                   {{ $filtro == 'rechazadas' ? 'bg-red-500 text-white' : 'border border-omg-kashmir text-omg-nile hover:bg-omg-chardon' }}">
+                   {{ $filtro == 'rechazadas' ? 'bg-red-500 text-white' : 'border border-gray-300 text-omg-slate hover:bg-orange-50' }}">
                     <i class="fas fa-times-circle mr-1"></i> Rechazadas
                 </a>
             </div>
 
             @forelse($solicitudes as $s)
-            <div class="border border-omg-kashmir rounded-xl p-4 mb-4 bg-omg-chardon hover:shadow-md transition">
+            <div class="border rounded-xl p-4 mb-4 transition hover:shadow-md"
+                 style="border-color: #A9AAAD; background-color: #FFF3EC;">
                 <div class="grid grid-cols-3 gap-4 mb-3">
                     <div>
-                        <p class="text-xs text-omg-kashmir font-semibold flex items-center gap-1">
-                            <i class="fas fa-user"></i> Solicitante (ID)
+                        <p class="text-xs font-semibold flex items-center gap-1" style="color: #A9AAAD;">
+                            <i class="fas fa-user"></i> Solicitante
                         </p>
                         <p class="font-semibold text-omg-slate">{{ $s->solicitante->name ?? 'Sin nombre' }}</p>
                     </div>
                     <div>
-                        <p class="text-xs text-omg-kashmir font-semibold flex items-center gap-1">
+                        <p class="text-xs font-semibold flex items-center gap-1" style="color: #A9AAAD;">
                             <i class="fas fa-calendar"></i> Fecha de Visita
                         </p>
                         <p class="font-semibold text-omg-slate">{{ $s->fecha_inicio }}</p>
                     </div>
                     <div>
-                        <p class="text-xs text-omg-kashmir font-semibold flex items-center gap-1">
+                        <p class="text-xs font-semibold flex items-center gap-1" style="color: #A9AAAD;">
                             <i class="fas fa-info-circle"></i> Estado
                         </p>
                         <span class="px-2 py-1 rounded-full text-white text-xs font-semibold
@@ -67,19 +68,19 @@
                         </span>
                     </div>
                     <div>
-                        <p class="text-xs text-omg-kashmir font-semibold flex items-center gap-1">
+                        <p class="text-xs font-semibold flex items-center gap-1" style="color: #A9AAAD;">
                             <i class="fas fa-map-marker-alt"></i> Lugar
                         </p>
                         <p class="font-semibold text-omg-slate">{{ $s->lugar_encuentro }}</p>
                     </div>
                     <div>
-                        <p class="text-xs text-omg-kashmir font-semibold flex items-center gap-1">
+                        <p class="text-xs font-semibold flex items-center gap-1" style="color: #A9AAAD;">
                             <i class="fas fa-file-alt"></i> Motivo
                         </p>
                         <p class="font-semibold text-omg-slate">{{ $s->motivo_visita }}</p>
                     </div>
                     <div>
-                        <p class="text-xs text-omg-kashmir font-semibold flex items-center gap-1">
+                        <p class="text-xs font-semibold flex items-center gap-1" style="color: #A9AAAD;">
                             <i class="fas fa-users"></i> Visitantes
                         </p>
                         @foreach($s->visitantes as $v)
@@ -100,7 +101,8 @@
                     <form action="{{ route('autorizador.autorizar', $s->id_solicitud) }}" method="POST">
                         @csrf
                         <button type="submit"
-                            class="bg-omg-coral text-white px-4 py-2 rounded-lg hover:opacity-90 font-heading font-semibold flex items-center gap-2">
+                            class="text-white px-4 py-2 rounded-lg hover:opacity-90 font-heading font-semibold flex items-center gap-2"
+                            style="background-color: #DA7E2D;">
                             <i class="fas fa-check-circle"></i> Autorizar
                         </button>
                     </form>
