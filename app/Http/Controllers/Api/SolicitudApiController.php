@@ -214,6 +214,48 @@ class SolicitudApiController extends Controller
         ]);
     }
 
+    public function enviarQR($id)
+{
+    $solicitud = Solicitud::with([
+        'estado',
+        'tipo',
+        'visitantes',
+        'solicitudVisitantes.qr',
+        'solicitante',
+    ])->findOrFail($id);
+
+    if ($solicitud->id_estado_solicitud !== 2) {
+        return response()->json([
+            'message' => 'Solo se puede enviar el QR cuando la solicitud está autorizada.',
+            'data'    => null,
+        ], 422);
+    }
+
+    $qrs = $solicitud->solicitudVisitantes
+        ->map(function ($sv) {
+            return $sv->qr;
+        })
+        ->filter()
+        ->values();
+
+    if ($qrs->isEmpty()) {
+        return response()->json([
+            'message' => 'No se encontró un QR asociado a esta solicitud.',
+            'data'    => null,
+        ], 404);
+    }
+
+    $this->formatearSolicitudParaMovil($solicitud);
+
+    return response()->json([
+        'message' => 'QR listo para compartir con el visitante.',
+        'data'    => [
+            'solicitud' => $solicitud,
+            'qrs'       => $qrs,
+        ],
+    ]);
+}
+
     public function pendientes(Request $request)
     {
         $filtro = $request->get('filtro', 'pendientes');
