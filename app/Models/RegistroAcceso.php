@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class RegistroAcceso extends Model
 {
-    protected $table      = 'RegistroAcceso';
+    protected $table      = 'registroacceso';   // nombre real de la tabla
     protected $primaryKey = 'id_registro';
     public    $timestamps = false;
 
@@ -16,11 +16,11 @@ class RegistroAcceso extends Model
         'hora_salida_encuentro',
         'hora_salida_institucion',
         'observaciones',
-        'id_vigilante_entrada',
-        'id_vigilante_salida',
+        'telefono_vigilante_entrada',
+        'caseta_entrada',
+        'telefono_vigilante_salida',
+        'caseta_salida',
         'id_qr',
-        'telefono_vigilante',
-        'area_vigilante',
     ];
 
     public function qr()
