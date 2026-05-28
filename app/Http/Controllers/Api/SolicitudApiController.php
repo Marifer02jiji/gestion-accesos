@@ -22,7 +22,7 @@ class SolicitudApiController extends Controller
     public function index()
     {
         $solicitudes = Solicitud::where('id_solicitante', $this->idEmpleado())
-            ->with(['estado', 'tipo', 'visitantes'])
+            ->with(['estado', 'tipo', 'visitantes', 'solicitante'])
             ->orderBy('fecha_creacion', 'desc')
             ->paginate(10);
 
@@ -78,14 +78,14 @@ class SolicitudApiController extends Controller
 
         return response()->json([
             'message' => 'Solicitud creada correctamente.',
-            'data'    => $solicitud->load(['estado', 'tipo', 'visitantes']),
+            'data'    => $solicitud->load(['estado', 'tipo', 'visitantes', 'solicitante']),
         ], 201);
     }
 
     // Ver detalle de solicitud
     public function show($id)
     {
-        $solicitud = Solicitud::with(['estado', 'tipo', 'visitantes', 'solicitudVisitantes.qr'])
+        $solicitud = Solicitud::with(['estado', 'tipo', 'visitantes', 'solicitudVisitantes.qr', 'solicitante'])
             ->findOrFail($id);
 
         return response()->json([
@@ -121,7 +121,7 @@ class SolicitudApiController extends Controller
 
         return response()->json([
             'message' => 'Solicitud cancelada correctamente.',
-            'data'    => $solicitud,
+            'data'    => $solicitud->load(['solicitante']),
         ]);
     }
 
@@ -152,7 +152,7 @@ class SolicitudApiController extends Controller
     {
         $filtro = $request->get('filtro', 'pendientes');
 
-        $query = Solicitud::with(['estado', 'tipo', 'visitantes']);
+        $query = Solicitud::with(['estado', 'tipo', 'visitantes', 'solicitante']);
 
         match($filtro) {
             'aprobadas'  => $query->where('id_estado_solicitud', 2),
@@ -213,7 +213,7 @@ class SolicitudApiController extends Controller
 
         return response()->json([
             'message' => 'Solicitud autorizada correctamente.',
-            'data'    => $solicitud,
+            'data'    => $solicitud->load(['solicitante']),
         ]);
     }
 
@@ -241,7 +241,7 @@ class SolicitudApiController extends Controller
 
         return response()->json([
             'message' => 'Solicitud rechazada correctamente.',
-            'data'    => $solicitud,
+            'data'    => $solicitud->load(['solicitante']),
         ]);
     }
 }
