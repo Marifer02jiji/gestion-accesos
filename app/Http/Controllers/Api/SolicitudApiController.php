@@ -28,8 +28,7 @@ class SolicitudApiController extends Controller
             ?? $solicitud->solicitante->nombre
             ?? 'Sin nombre';
 
-        $solicitud->correo_solicitante = $solicitud->solicitante->email
-            ?? '';
+        $solicitud->correo_solicitante = $solicitud->solicitante->email ?? '';
 
         $solicitud->tipo_visita = $solicitud->tipo->nombre
             ?? $solicitud->tipo->descripcion
@@ -79,37 +78,24 @@ class SolicitudApiController extends Controller
         $this->cancelarPendientesVencidas();
 
         $query = Solicitud::where('id_solicitante', $this->idEmpleado())
-            ->with([
-                'estado',
-                'tipo',
-                'visitantes',
-                'solicitante',
-            ]);
+            ->with(['estado', 'tipo', 'visitantes', 'solicitante']);
 
         $estado = $request->get('estado');
-
         if ($estado) {
-            $estado = strtolower($estado);
-
             $mapaEstados = [
                 'pendiente'  => 1,
                 'autorizada' => 2,
                 'rechazada'  => 3,
                 'cancelada'  => 4,
             ];
-
-            if (isset($mapaEstados[$estado])) {
-                $query->where('id_estado_solicitud', $mapaEstados[$estado]);
+            $key = strtolower($estado);
+            if (isset($mapaEstados[$key])) {
+                $query->where('id_estado_solicitud', $mapaEstados[$key]);
             }
         }
 
-        $solicitudes = $query
-            ->orderBy('fecha_creacion', 'desc')
-            ->paginate(10);
-
-        $solicitudes->getCollection()->transform(function ($solicitud) {
-            return $this->formatearSolicitudParaMovil($solicitud);
-        });
+        $solicitudes = $query->orderBy('fecha_creacion', 'desc')->paginate(10);
+        $solicitudes->getCollection()->transform(fn($s) => $this->formatearSolicitudParaMovil($s));
 
         return response()->json([
             'message' => 'Solicitudes obtenidas correctamente.',
@@ -120,7 +106,26 @@ class SolicitudApiController extends Controller
     public function store(Request $request)
     {
         $request->validate([
-            'fecha_inicio'           => ['required', 'date', new AnticipacionMinimaVisita(1)],
+            'fecha_inicio' => ['required', 'date', new AnticipacionMinimaVisita(1), function($attribute, $value, $fail) {
+                $fecha = Carbon::parse($value);
+                $hora  = (int) $fecha->format('H');
+                $dia   = (int) $fecha->dayOfWeek;
+
+                if ($dia === 0) {
+                    $fail('No se pueden agendar visitas los domingos.');
+                    return;
+                }
+
+                if ($dia === 6 && $hora >= 14) {
+                    $fail('Los sabados solo se permiten visitas hasta las 2:00 PM.');
+                    return;
+                }
+
+                if ($hora < 6 || $hora >= 21) {
+                    $fail('Las visitas solo pueden agendarse entre las 6:00 AM y las 9:00 PM.');
+                    return;
+                }
+            }],
             'lugar_encuentro'        => 'required|string|max:100',
             'motivo_visita'          => 'required|string|max:255',
             'id_tipo_solicitud'      => 'required|exists:ca_TipoSolicitud,id_tipo_solicitud',
@@ -148,51 +153,28 @@ class SolicitudApiController extends Controller
         foreach ($request->visitantes as $v) {
             $visitante = Visitante::firstOrCreate(
                 ['correo_personal' => $v['correo']],
-                [
-                    'nombre'    => $v['nombre'],
-                    'apellidos' => $v['apellidos'],
-                ]
+                ['nombre' => $v['nombre'], 'apellidos' => $v['apellidos']]
             );
-
             SolicitudVisitante::create([
                 'id_solicitud' => $solicitud->id_solicitud,
                 'id_visitante' => $visitante->id_visitante,
             ]);
         }
 
-        $solicitud = Solicitud::with([
-            'estado',
-            'tipo',
-            'visitantes',
-            'solicitante',
-        ])->findOrFail($solicitud->id_solicitud);
-
+        $solicitud = Solicitud::with(['estado', 'tipo', 'visitantes', 'solicitante'])->findOrFail($solicitud->id_solicitud);
         $this->formatearSolicitudParaMovil($solicitud);
 
-        return response()->json([
-            'message' => 'Solicitud creada correctamente.',
-            'data'    => $solicitud,
-        ], 201);
+        return response()->json(['message' => 'Solicitud creada correctamente.', 'data' => $solicitud], 201);
     }
 
     public function show($id)
     {
         $this->cancelarPendientesVencidas();
 
-        $solicitud = Solicitud::with([
-            'estado',
-            'tipo',
-            'visitantes',
-            'solicitudVisitantes.qr',
-            'solicitante',
-        ])->findOrFail($id);
-
+        $solicitud = Solicitud::with(['estado', 'tipo', 'visitantes', 'solicitudVisitantes.qr', 'solicitante'])->findOrFail($id);
         $this->formatearSolicitudParaMovil($solicitud);
 
-        return response()->json([
-            'message' => 'Solicitud obtenida correctamente.',
-            'data'    => $solicitud,
-        ]);
+        return response()->json(['message' => 'Solicitud obtenida correctamente.', 'data' => $solicitud]);
     }
 
     public function cancelar($id)
@@ -200,10 +182,7 @@ class SolicitudApiController extends Controller
         $solicitud = Solicitud::with('solicitudVisitantes.qr')->findOrFail($id);
 
         if (!$solicitud->esCancelable()) {
-            return response()->json([
-                'message' => 'Esta solicitud no puede cancelarse en su estado actual.',
-                'data'    => null,
-            ], 422);
+            return response()->json(['message' => 'Esta solicitud no puede cancelarse.', 'data' => null], 422);
         }
 
         foreach ($solicitud->solicitudVisitantes as $sv) {
@@ -218,10 +197,7 @@ class SolicitudApiController extends Controller
             'fecha_cancelacion'   => now(),
         ]);
 
-        return response()->json([
-            'message' => 'Solicitud cancelada correctamente.',
-            'data'    => $solicitud,
-        ]);
+        return response()->json(['message' => 'Solicitud cancelada correctamente.', 'data' => $solicitud]);
     }
 
     public function qr($id)
@@ -229,48 +205,24 @@ class SolicitudApiController extends Controller
         $solicitud = Solicitud::with('solicitudVisitantes.qr')->findOrFail($id);
 
         if ($solicitud->id_estado_solicitud !== 2) {
-            return response()->json([
-                'message' => 'La solicitud no está autorizada.',
-                'data'    => null,
-            ], 422);
+            return response()->json(['message' => 'La solicitud no esta autorizada.', 'data' => null], 422);
         }
 
-        $qrs = $solicitud->solicitudVisitantes
-            ->map(function ($sv) {
-                return $sv->qr;
-            })
-            ->filter()
-            ->values();
+        $qrs = $solicitud->solicitudVisitantes->map(fn($sv) => $sv->qr)->filter()->values();
 
-        return response()->json([
-            'message' => 'QR obtenido correctamente.',
-            'data'    => $qrs,
-        ]);
+        return response()->json(['message' => 'QR obtenido correctamente.', 'data' => $qrs]);
     }
 
     public function enviarQR($id)
     {
-        $solicitud = Solicitud::with([
-            'estado',
-            'tipo',
-            'visitantes',
-            'solicitudVisitantes.qr',
-            'solicitudVisitantes.visitante',
-            'solicitante',
-        ])->findOrFail($id);
+        $solicitud = Solicitud::with(['estado', 'tipo', 'visitantes', 'solicitudVisitantes.qr', 'solicitudVisitantes.visitante', 'solicitante'])->findOrFail($id);
 
         if ($solicitud->id_estado_solicitud !== 2) {
-            return response()->json([
-                'message' => 'La solicitud debe estar autorizada para enviar el QR.',
-                'data'    => null,
-            ], 422);
+            return response()->json(['message' => 'La solicitud debe estar autorizada para enviar el QR.', 'data' => null], 422);
         }
 
         if ($this->solicitudYaVencio($solicitud)) {
-            return response()->json([
-                'message' => 'No se puede enviar el QR, la vigencia de la visita ya pasó.',
-                'data'    => null,
-            ], 422);
+            return response()->json(['message' => 'No se puede enviar el QR, la vigencia de la visita ya paso.', 'data' => null], 422);
         }
 
         $enviados = 0;
@@ -279,11 +231,7 @@ class SolicitudApiController extends Controller
         foreach ($solicitud->solicitudVisitantes as $sv) {
             $qr     = $sv->qr;
             $correo = $sv->visitante->correo_personal ?? null;
-
-            if (!$qr || !$correo) {
-                continue;
-            }
-
+            if (!$qr || !$correo) continue;
             try {
                 Mail::to($correo)->send(new EnviarQRMail($qr));
                 $enviados++;
@@ -294,43 +242,22 @@ class SolicitudApiController extends Controller
         }
 
         if ($enviados === 0) {
-            return response()->json([
-                'message' => 'No se pudo enviar el QR.',
-                'data'    => [
-                    'enviados' => $enviados,
-                    'errores'  => $errores,
-                ],
-            ], 500);
+            return response()->json(['message' => 'No se pudo enviar el QR.', 'data' => ['enviados' => 0, 'errores' => $errores]], 500);
         }
 
-        return response()->json([
-            'message' => "QR enviado correctamente a {$enviados} visitante(s).",
-            'data'    => [
-                'enviados' => $enviados,
-                'errores'  => $errores,
-            ],
-        ]);
+        return response()->json(['message' => "QR enviado correctamente a {$enviados} visitante(s).", 'data' => ['enviados' => $enviados, 'errores' => $errores]]);
     }
 
     public function reenviarQR($id)
     {
-        $solicitud = Solicitud::with([
-            'solicitudVisitantes.qr',
-            'solicitudVisitantes.visitante',
-        ])->findOrFail($id);
+        $solicitud = Solicitud::with(['solicitudVisitantes.qr', 'solicitudVisitantes.visitante'])->findOrFail($id);
 
         if (($solicitud->reenvios_qr ?? 0) >= 3) {
-            return response()->json([
-                'message' => 'Se alcanzó el límite de 3 reenvíos.',
-                'data'    => ['reenvios_restantes' => 0],
-            ], 422);
+            return response()->json(['message' => 'Se alcanzo el limite de 3 reenvios.', 'data' => ['reenvios_restantes' => 0]], 422);
         }
 
         if ($this->solicitudYaVencio($solicitud)) {
-            return response()->json([
-                'message' => 'No se puede reenviar el QR, la vigencia de la visita ya pasó.',
-                'data'    => null,
-            ], 422);
+            return response()->json(['message' => 'No se puede reenviar el QR, la vigencia ya paso.', 'data' => null], 422);
         }
 
         $enviados = 0;
@@ -339,11 +266,7 @@ class SolicitudApiController extends Controller
         foreach ($solicitud->solicitudVisitantes as $sv) {
             $qr     = $sv->qr;
             $correo = $sv->visitante->correo_personal ?? null;
-
-            if (!$qr || !$correo) {
-                continue;
-            }
-
+            if (!$qr || !$correo) continue;
             try {
                 Mail::to($correo)->send(new EnviarQRMail($qr));
                 $enviados++;
@@ -354,44 +277,25 @@ class SolicitudApiController extends Controller
         }
 
         if ($enviados === 0) {
-            return response()->json([
-                'message' => 'No se pudo reenviar el QR.',
-                'data'    => [
-                    'enviados' => $enviados,
-                    'errores'  => $errores,
-                ],
-            ], 500);
+            return response()->json(['message' => 'No se pudo reenviar el QR.', 'data' => ['enviados' => 0, 'errores' => $errores]], 500);
         }
 
         $solicitud->increment('reenvios_qr');
-
         $solicitud->refresh();
         $restantes = 3 - ($solicitud->reenvios_qr ?? 0);
 
-        return response()->json([
-            'message' => "QR reenviado. Reenvíos restantes: {$restantes}",
-            'data'    => [
-                'reenvios_restantes' => $restantes,
-                'enviados'           => $enviados,
-                'errores'            => $errores,
-            ],
-        ]);
+        return response()->json(['message' => "QR reenviado. Reenvios restantes: {$restantes}", 'data' => ['reenvios_restantes' => $restantes, 'enviados' => $enviados, 'errores' => $errores]]);
     }
 
     public function extenderQR(Request $request, $id)
     {
-        $solicitud = Solicitud::with('solicitudVisitantes.qr')->findOrFail($id);
-
-        $minutos = (int) $request->input('minutos_extra', 60);
+        $solicitud  = Solicitud::with('solicitudVisitantes.qr')->findOrFail($id);
+        $minutos    = (int) $request->input('minutos_extra', 60);
+        $extendidos = 0;
 
         if ($minutos <= 0) {
-            return response()->json([
-                'message' => 'Los minutos extra deben ser mayores a cero.',
-                'data'    => null,
-            ], 422);
+            return response()->json(['message' => 'Los minutos extra deben ser mayores a cero.', 'data' => null], 422);
         }
-
-        $extendidos = 0;
 
         foreach ($solicitud->solicitudVisitantes as $sv) {
             if ($sv->qr && in_array($sv->qr->id_estadoQr, [1, 2])) {
@@ -399,54 +303,38 @@ class SolicitudApiController extends Controller
                     'vigencia_final'      => Carbon::parse($sv->qr->vigencia_final)->addMinutes($minutos),
                     'prorroga_tolerancia' => true,
                 ]);
-
                 $extendidos++;
             }
         }
 
-        return response()->json([
-            'message' => "QR extendido {$minutos} minutos para {$extendidos} visitante(s).",
-            'data'    => [
-                'minutos_extra' => $minutos,
-                'extendidos'    => $extendidos,
-            ],
-        ]);
+        return response()->json(['message' => "QR extendido {$minutos} minutos para {$extendidos} visitante(s).", 'data' => ['minutos_extra' => $minutos, 'extendidos' => $extendidos]]);
     }
 
     public function activas(Request $request)
     {
-        $idEmpleado = $request->user()->idSam();
-
-        $solicitudes = Solicitud::where('id_solicitante', $idEmpleado)
+        $solicitudes = Solicitud::where('id_solicitante', $request->user()->idSam())
             ->where('id_estado_solicitud', 2)
             ->with(['visitantes', 'estado', 'tipo'])
             ->get()
-            ->filter(function ($solicitud) {
-                return !$this->solicitudYaVencio($solicitud);
-            })
+            ->filter(fn($s) => !$this->solicitudYaVencio($s))
             ->values();
 
-        $data = $solicitudes->map(function ($s) {
-            return [
-                'id_solicitud'    => $s->id_solicitud,
-                'folio'           => $s->folio,
-                'fecha_inicio'    => $s->fecha_inicio,
-                'lugar_encuentro' => $s->lugar_encuentro,
-                'motivo_visita'   => $s->motivo_visita,
-                'estado'          => $s->estado->nombre ?? '',
-                'tipo'            => $s->tipo->nombre ?? '',
-                'visitantes'      => $s->visitantes->map(fn($v) => [
-                    'nombre'          => $v->nombre,
-                    'apellidos'       => $v->apellidos,
-                    'correo_personal' => $v->correo_personal,
-                ]),
-            ];
-        });
-
-        return response()->json([
-            'message' => 'Visitas activas obtenidas correctamente.',
-            'data'    => $data,
+        $data = $solicitudes->map(fn($s) => [
+            'id_solicitud'    => $s->id_solicitud,
+            'folio'           => $s->folio,
+            'fecha_inicio'    => $s->fecha_inicio,
+            'lugar_encuentro' => $s->lugar_encuentro,
+            'motivo_visita'   => $s->motivo_visita,
+            'estado'          => $s->estado->nombre ?? '',
+            'tipo'            => $s->tipo->nombre ?? '',
+            'visitantes'      => $s->visitantes->map(fn($v) => [
+                'nombre'          => $v->nombre,
+                'apellidos'       => $v->apellidos,
+                'correo_personal' => $v->correo_personal,
+            ]),
         ]);
+
+        return response()->json(['message' => 'Visitas activas obtenidas correctamente.', 'data' => $data]);
     }
 
     public function pendientes(Request $request)
@@ -454,34 +342,20 @@ class SolicitudApiController extends Controller
         $this->cancelarPendientesVencidas();
 
         $filtro = strtolower($request->get('filtro', 'pendientes'));
-
-        $query = Solicitud::with([
-            'estado',
-            'tipo',
-            'visitantes',
-            'solicitante',
-        ]);
+        $query  = Solicitud::with(['estado', 'tipo', 'visitantes', 'solicitante']);
 
         match ($filtro) {
             'autorizadas', 'aprobadas' => $query->where('id_estado_solicitud', 2),
-            'rechazadas'              => $query->where('id_estado_solicitud', 3),
-            'canceladas'              => $query->where('id_estado_solicitud', 4),
-            'todas', 'todos'          => null,
-            default                   => $query->where('id_estado_solicitud', 1),
+            'rechazadas'               => $query->where('id_estado_solicitud', 3),
+            'canceladas'               => $query->where('id_estado_solicitud', 4),
+            'todas', 'todos'           => null,
+            default                    => $query->where('id_estado_solicitud', 1),
         };
 
-        $solicitudes = $query
-            ->orderBy('fecha_creacion', 'desc')
-            ->paginate(10);
+        $solicitudes = $query->orderBy('fecha_creacion', 'desc')->paginate(10);
+        $solicitudes->getCollection()->transform(fn($s) => $this->formatearSolicitudParaMovil($s));
 
-        $solicitudes->getCollection()->transform(function ($solicitud) {
-            return $this->formatearSolicitudParaMovil($solicitud);
-        });
-
-        return response()->json([
-            'message' => 'Solicitudes obtenidas correctamente.',
-            'data'    => $solicitudes,
-        ]);
+        return response()->json(['message' => 'Solicitudes obtenidas correctamente.', 'data' => $solicitudes]);
     }
 
     public function autorizar($id)
@@ -489,43 +363,21 @@ class SolicitudApiController extends Controller
         $solicitud = Solicitud::with('solicitudVisitantes.visitante')->findOrFail($id);
 
         if ((int) $solicitud->id_estado_solicitud !== 1) {
-            return response()->json([
-                'message' => 'Esta solicitud ya fue procesada.',
-                'data'    => null,
-            ], 422);
+            return response()->json(['message' => 'Esta solicitud ya fue procesada.', 'data' => null], 422);
         }
 
         if ($this->solicitudYaVencio($solicitud)) {
-            $solicitud->update([
-                'id_estado_solicitud' => 4,
-                'fecha_cancelacion'   => now(),
-            ]);
-
-            return response()->json([
-                'message' => 'Esta solicitud ya venció y fue cancelada automáticamente.',
-                'data'    => null,
-            ], 422);
+            $solicitud->update(['id_estado_solicitud' => 4, 'fecha_cancelacion' => now()]);
+            return response()->json(['message' => 'Esta solicitud ya vencio y fue cancelada automaticamente.', 'data' => null], 422);
         }
 
-        $solicitud->update([
-            'id_estado_solicitud' => 2,
-            'id_autorizador'      => $this->idEmpleado(),
-        ]);
+        $solicitud->update(['id_estado_solicitud' => 2, 'id_autorizador' => $this->idEmpleado()]);
 
         foreach ($solicitud->solicitudVisitantes as $sv) {
-            if ($sv->qr) {
-                continue;
-            }
+            if ($sv->qr) continue;
 
-            $inicio = date(
-                'Y-m-d H:i:s',
-                strtotime($solicitud->fecha_inicio . ' -' . $solicitud->tolerancia_antes . ' minutes')
-            );
-
-            $fin = date(
-                'Y-m-d H:i:s',
-                strtotime($solicitud->fecha_inicio . ' +' . $solicitud->tolerancia_despues . ' minutes')
-            );
+            $inicio = date('Y-m-d H:i:s', strtotime($solicitud->fecha_inicio . ' -' . $solicitud->tolerancia_antes . ' minutes'));
+            $fin    = date('Y-m-d H:i:s', strtotime($solicitud->fecha_inicio . ' +' . $solicitud->tolerancia_despues . ' minutes'));
 
             QR::create([
                 'codigo_numerico'        => QR::generarCodigo(),
@@ -545,19 +397,10 @@ class SolicitudApiController extends Controller
             'leida'        => false,
         ]);
 
-        $solicitud = Solicitud::with([
-            'estado',
-            'tipo',
-            'visitantes',
-            'solicitante',
-        ])->findOrFail($id);
-
+        $solicitud = Solicitud::with(['estado', 'tipo', 'visitantes', 'solicitante'])->findOrFail($id);
         $this->formatearSolicitudParaMovil($solicitud);
 
-        return response()->json([
-            'message' => 'Solicitud autorizada correctamente.',
-            'data'    => $solicitud,
-        ]);
+        return response()->json(['message' => 'Solicitud autorizada correctamente.', 'data' => $solicitud]);
     }
 
     public function rechazar($id)
@@ -565,10 +408,7 @@ class SolicitudApiController extends Controller
         $solicitud = Solicitud::findOrFail($id);
 
         if ((int) $solicitud->id_estado_solicitud !== 1) {
-            return response()->json([
-                'message' => 'Esta solicitud ya fue procesada.',
-                'data'    => null,
-            ], 422);
+            return response()->json(['message' => 'Esta solicitud ya fue procesada.', 'data' => null], 422);
         }
 
         $solicitud->update(['id_estado_solicitud' => 3]);
@@ -581,18 +421,10 @@ class SolicitudApiController extends Controller
             'leida'        => false,
         ]);
 
-        $solicitud = Solicitud::with([
-            'estado',
-            'tipo',
-            'visitantes',
-            'solicitante',
-        ])->findOrFail($id);
-
+        $solicitud = Solicitud::with(['estado', 'tipo', 'visitantes', 'solicitante'])->findOrFail($id);
         $this->formatearSolicitudParaMovil($solicitud);
 
-        return response()->json([
-            'message' => 'Solicitud rechazada correctamente.',
-            'data'    => $solicitud,
-        ]);
+        return response()->json(['message' => 'Solicitud rechazada correctamente.', 'data' => $solicitud]);
     }
 }
+
