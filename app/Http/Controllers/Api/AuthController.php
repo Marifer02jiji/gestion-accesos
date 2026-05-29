@@ -111,6 +111,8 @@ class AuthController extends Controller
                 'email'           => $user->email,
                 'rol'             => $rolFinal,
                 'rol_api'         => $rolFinal,
+               
+                'roles'           => $user->getRoleNames(),
                 'id_departamento' => $empleado->id_departamento,
                 'departamento'    => '',
             ],
