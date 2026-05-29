@@ -12,7 +12,9 @@
  * ID: 3 | Fecha: 26/05/2026 | Descripción: Fix búsqueda usuario SAM con dominio
  * ID: 4 | Fecha: 27/05/2026 | Descripción: Ajuste nombres de departamentos autorizadores
  * ID: 5 | Fecha: 29/05/2026 | Descripción: Fix búsqueda por name — respeta roles manuales
+ * ID: 6 | Fecha: 29/05/2026 | Descripción: Soporte para roles múltiples solicitante/autorizador
  */
+
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
@@ -21,6 +23,7 @@ use App\Models\Notificacion;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Spatie\Permission\Models\Role;
 
 class AuthController extends Controller
 {
@@ -32,6 +35,7 @@ class AuthController extends Controller
         ]);
 
         $usuarioInput = $request->usuario;
+
         if (str_contains($usuarioInput, '@')) {
             $usuarioInput = explode('@', $usuarioInput)[0];
         }
@@ -48,6 +52,7 @@ class AuthController extends Controller
         }
 
         $passwordSam = $empleado->getAttributes()['password'] ?? null;
+
         if (!$passwordSam || $passwordSam !== hash('sha256', $request->password)) {
             return response()->json([
                 'message' => 'Las credenciales no coinciden con nuestros registros.',
@@ -55,7 +60,8 @@ class AuthController extends Controller
             ], 401);
         }
 
-        // Buscar por name (usuario SAM) — respeta el email y rol que ya tenga
+        // Buscar por name, que corresponde al usuario SAM.
+        // Esto evita duplicar usuarios cuando inician con usuario o correo.
         $user = User::where('name', $usuarioInput)->first();
 
         if (!$user) {
@@ -68,36 +74,72 @@ class AuthController extends Controller
         }
 
         if (!$user->id_empleado_sam) {
-            $user->update(['id_empleado_sam' => $empleado->id_empleado]);
+            $user->update([
+                'id_empleado_sam' => $empleado->id_empleado,
+            ]);
         }
 
-        // Solo asignar rol si no tiene ninguno — respeta roles manuales
-        if ($user->roles->isEmpty()) {
-            $esJefe = (int) $empleado->jefe === 1;
+        /*
+        |--------------------------------------------------------------------------
+        | Asignación de roles sin borrar roles existentes
+        |--------------------------------------------------------------------------
+        | Todo usuario SAM puede ser solicitante.
+        | Si además es jefe o pertenece a un departamento autorizador,
+        | también se le agrega el rol autorizador.
+        |
+        | IMPORTANTE:
+        | No usamos syncRoles() porque eso podría borrar roles manuales.
+        */
 
-            $departamentosAutorizadores = DB::connection('sam')
-                ->table('departamento')
-                ->where(function ($q) {
-                    $q->whereRaw('LOWER(nombre) LIKE ?', ['%recursos humanos%'])
-                      ->orWhereRaw('LOWER(nombre) LIKE ?', ['%recursos materiales%'])
-                      ->orWhereRaw('LOWER(nombre) LIKE ?', ['%comunicacion y difusion%'])
-                      ->orWhereRaw('LOWER(nombre) LIKE ?', ['%desarrollo academico%']);
-                })
-                ->pluck('id_departamento')
-                ->toArray();
+        Role::firstOrCreate([
+            'name'       => 'solicitante',
+            'guard_name' => 'web',
+        ]);
 
-            $esDeptoAutorizador = in_array((int) $empleado->id_departamento, $departamentosAutorizadores, true);
-            $rol = ($esJefe || $esDeptoAutorizador) ? 'autorizador' : 'solicitante';
+        Role::firstOrCreate([
+            'name'       => 'autorizador',
+            'guard_name' => 'web',
+        ]);
 
-            \Spatie\Permission\Models\Role::firstOrCreate(
-                ['name' => $rol, 'guard_name' => 'web']
-            );
-
-            $user->assignRole($rol);
+        if (!$user->hasRole('solicitante')) {
+            $user->assignRole('solicitante');
         }
 
-        // Usar el rol real de BD para la respuesta
-        $rolFinal = $user->getRoleNames()->first() ?? 'solicitante';
+        $esJefe = (int) $empleado->jefe === 1;
+
+        $departamentosAutorizadores = DB::connection('sam')
+            ->table('departamento')
+            ->where(function ($q) {
+                $q->whereRaw('LOWER(nombre) LIKE ?', ['%recursos humanos%'])
+                    ->orWhereRaw('LOWER(nombre) LIKE ?', ['%recursos materiales%'])
+                    ->orWhereRaw('LOWER(nombre) LIKE ?', ['%comunicacion y difusion%'])
+                    ->orWhereRaw('LOWER(nombre) LIKE ?', ['%comunicación y difusión%'])
+                    ->orWhereRaw('LOWER(nombre) LIKE ?', ['%desarrollo academico%'])
+                    ->orWhereRaw('LOWER(nombre) LIKE ?', ['%desarrollo académico%']);
+            })
+            ->pluck('id_departamento')
+            ->toArray();
+
+        $esDeptoAutorizador = in_array(
+            (int) $empleado->id_departamento,
+            $departamentosAutorizadores,
+            true
+        );
+
+        if (($esJefe || $esDeptoAutorizador) && !$user->hasRole('autorizador')) {
+            $user->assignRole('autorizador');
+        }
+
+        // Recargar roles después de asignar.
+        $user->load('roles');
+
+        $roles = $user->getRoleNames();
+
+        // Si tiene rol autorizador, lo dejamos como rol principal.
+        // Pero en "roles" se siguen mandando todos.
+        $rolFinal = $roles->contains('autorizador')
+            ? 'autorizador'
+            : ($roles->first() ?? 'solicitante');
 
         $token = $user->createToken('flutter-token')->plainTextToken;
 
@@ -107,12 +149,11 @@ class AuthController extends Controller
                 'token'           => $token,
                 'id'              => $user->id,
                 'id_empleado_sam' => $empleado->id_empleado,
-                'name'            => $empleado->nombre . ' ' . $empleado->apellidoPa,
+                'name'            => trim($empleado->nombre . ' ' . $empleado->apellidoPa),
                 'email'           => $user->email,
                 'rol'             => $rolFinal,
                 'rol_api'         => $rolFinal,
-               
-                'roles'           => $user->getRoleNames(),
+                'roles'           => $roles,
                 'id_departamento' => $empleado->id_departamento,
                 'departamento'    => '',
             ],
