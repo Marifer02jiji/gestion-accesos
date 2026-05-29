@@ -9,7 +9,11 @@ use App\Models\QR;
 use App\Models\Solicitud;
 use App\Models\SolicitudVisitante;
 use App\Models\Visitante;
+use App\Mail\EnviarQRMail;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
 
 class SolicitudApiController extends Controller
 {
@@ -40,6 +44,7 @@ class SolicitudApiController extends Controller
             1 => 'Proveedor',
             2 => 'Institucional / Negocios',
             3 => 'Personal',
+            4 => 'Consulta',
             default => 'Sin tipo',
         };
     }
@@ -215,46 +220,202 @@ class SolicitudApiController extends Controller
     }
 
     public function enviarQR($id)
-{
-    $solicitud = Solicitud::with([
-        'estado',
-        'tipo',
-        'visitantes',
-        'solicitudVisitantes.qr',
-        'solicitante',
-    ])->findOrFail($id);
+    {
+        $solicitud = Solicitud::with([
+            'estado',
+            'tipo',
+            'visitantes',
+            'solicitudVisitantes.qr',
+            'solicitudVisitantes.visitante',
+            'solicitante',
+        ])->findOrFail($id);
 
-    if ($solicitud->id_estado_solicitud !== 2) {
+        if ($solicitud->id_estado_solicitud !== 2) {
+            return response()->json([
+                'message' => 'La solicitud debe estar autorizada para enviar el QR.',
+                'data'    => null,
+            ], 422);
+        }
+
+        if (now() > Carbon::parse($solicitud->fecha_inicio)) {
+            return response()->json([
+                'message' => 'No se puede enviar el QR, la fecha de la visita ya pasó.',
+                'data'    => null,
+            ], 422);
+        }
+
+        $enviados = 0;
+        $errores  = 0;
+
+        foreach ($solicitud->solicitudVisitantes as $sv) {
+            $qr     = $sv->qr;
+            $correo = $sv->visitante->correo_personal ?? null;
+
+            if (!$qr || !$correo) {
+                continue;
+            }
+
+            try {
+                Mail::to($correo)->send(new EnviarQRMail($qr));
+                $enviados++;
+            } catch (\Throwable $e) {
+                $errores++;
+                Log::error('Error enviando QR API: ' . $e->getMessage());
+            }
+        }
+
+        if ($enviados === 0) {
+            return response()->json([
+                'message' => 'No se pudo enviar el QR.',
+                'data'    => [
+                    'enviados' => $enviados,
+                    'errores'  => $errores,
+                ],
+            ], 500);
+        }
+
         return response()->json([
-            'message' => 'Solo se puede enviar el QR cuando la solicitud está autorizada.',
-            'data'    => null,
-        ], 422);
+            'message' => "QR enviado correctamente a {$enviados} visitante(s).",
+            'data'    => [
+                'enviados' => $enviados,
+                'errores'  => $errores,
+            ],
+        ]);
     }
 
-    $qrs = $solicitud->solicitudVisitantes
-        ->map(function ($sv) {
-            return $sv->qr;
-        })
-        ->filter()
-        ->values();
+    public function reenviarQR($id)
+    {
+        $solicitud = Solicitud::with([
+            'solicitudVisitantes.qr',
+            'solicitudVisitantes.visitante',
+        ])->findOrFail($id);
 
-    if ($qrs->isEmpty()) {
+        if (($solicitud->reenvios_qr ?? 0) >= 3) {
+            return response()->json([
+                'message' => 'Se alcanzó el límite de 3 reenvíos.',
+                'data'    => ['reenvios_restantes' => 0],
+            ], 422);
+        }
+
+        if (now() > Carbon::parse($solicitud->fecha_inicio)) {
+            return response()->json([
+                'message' => 'No se puede reenviar el QR, la fecha de la visita ya pasó.',
+                'data'    => null,
+            ], 422);
+        }
+
+        $enviados = 0;
+        $errores  = 0;
+
+        foreach ($solicitud->solicitudVisitantes as $sv) {
+            $qr     = $sv->qr;
+            $correo = $sv->visitante->correo_personal ?? null;
+
+            if (!$qr || !$correo) {
+                continue;
+            }
+
+            try {
+                Mail::to($correo)->send(new EnviarQRMail($qr));
+                $enviados++;
+            } catch (\Throwable $e) {
+                $errores++;
+                Log::error('Error reenviando QR API: ' . $e->getMessage());
+            }
+        }
+
+        if ($enviados === 0) {
+            return response()->json([
+                'message' => 'No se pudo reenviar el QR.',
+                'data'    => [
+                    'enviados' => $enviados,
+                    'errores'  => $errores,
+                ],
+            ], 500);
+        }
+
+        $solicitud->increment('reenvios_qr');
+
+        $solicitud->refresh();
+        $restantes = 3 - ($solicitud->reenvios_qr ?? 0);
+
         return response()->json([
-            'message' => 'No se encontró un QR asociado a esta solicitud.',
-            'data'    => null,
-        ], 404);
+            'message' => "QR reenviado. Reenvíos restantes: {$restantes}",
+            'data'    => [
+                'reenvios_restantes' => $restantes,
+                'enviados'           => $enviados,
+                'errores'            => $errores,
+            ],
+        ]);
     }
 
-    $this->formatearSolicitudParaMovil($solicitud);
+    public function extenderQR(Request $request, $id)
+    {
+        $solicitud = Solicitud::with('solicitudVisitantes.qr')->findOrFail($id);
 
-    return response()->json([
-        'message' => 'QR listo para compartir con el visitante.',
-        'data'    => [
-            'solicitud' => $solicitud,
-            'qrs'       => $qrs,
-        ],
-    ]);
-}
+        $minutos = (int) $request->input('minutos_extra', 60);
+
+        if ($minutos <= 0) {
+            return response()->json([
+                'message' => 'Los minutos extra deben ser mayores a cero.',
+                'data'    => null,
+            ], 422);
+        }
+
+        $extendidos = 0;
+
+        foreach ($solicitud->solicitudVisitantes as $sv) {
+            if ($sv->qr && in_array($sv->qr->id_estadoQr, [1, 2])) {
+                $sv->qr->update([
+                    'vigencia_final'      => Carbon::parse($sv->qr->vigencia_final)->addMinutes($minutos),
+                    'prorroga_tolerancia' => true,
+                ]);
+
+                $extendidos++;
+            }
+        }
+
+        return response()->json([
+            'message' => "QR extendido {$minutos} minutos para {$extendidos} visitante(s).",
+            'data'    => [
+                'minutos_extra' => $minutos,
+                'extendidos'    => $extendidos,
+            ],
+        ]);
+    }
+
+    public function activas(Request $request)
+    {
+        $idEmpleado = $request->user()->idSam();
+
+        $solicitudes = Solicitud::where('id_solicitante', $idEmpleado)
+            ->where('id_estado_solicitud', 2)
+            ->where('fecha_inicio', '>=', now())
+            ->with(['visitantes', 'estado', 'tipo'])
+            ->get();
+
+        $data = $solicitudes->map(function ($s) {
+            return [
+                'id_solicitud'    => $s->id_solicitud,
+                'folio'           => $s->folio,
+                'fecha_inicio'    => $s->fecha_inicio,
+                'lugar_encuentro' => $s->lugar_encuentro,
+                'motivo_visita'   => $s->motivo_visita,
+                'estado'          => $s->estado->nombre ?? '',
+                'tipo'            => $s->tipo->nombre ?? '',
+                'visitantes'      => $s->visitantes->map(fn($v) => [
+                    'nombre'          => $v->nombre,
+                    'apellidos'       => $v->apellidos,
+                    'correo_personal' => $v->correo_personal,
+                ]),
+            ];
+        });
+
+        return response()->json([
+            'message' => 'Visitas activas obtenidas correctamente.',
+            'data'    => $data,
+        ]);
+    }
 
     public function pendientes(Request $request)
     {
@@ -384,173 +545,4 @@ class SolicitudApiController extends Controller
             'data'    => $solicitud,
         ]);
     }
-
-
-
-
-// ****************************************
-
-
-    // Enviar QR por correo
-    public function enviarQR($id)
-    {
-        $solicitud = Solicitud::with(['solicitudVisitantes.qr', 'solicitudVisitantes.visitante'])
-            ->findOrFail($id);
-
-        if ($solicitud->id_estado_solicitud !== 2) {
-            return response()->json([
-                'message' => 'La solicitud debe estar autorizada para enviar el QR.',
-                'data'    => null,
-            ], 422);
-        }
-
-        // Validar que la visita no haya pasado
-        if (now() > \Carbon\Carbon::parse($solicitud->fecha_inicio)) {
-            return response()->json([
-                'message' => 'No se puede enviar el QR, la fecha de la visita ya paso.',
-                'data'    => null,
-            ], 422);
-        }
-
-        $enviados = 0;
-        $errores  = 0;
-
-        foreach ($solicitud->solicitudVisitantes as $sv) {
-            $qr     = $sv->qr;
-            $correo = $sv->visitante->correo_personal ?? null;
-
-            if (!$qr || !$correo) continue;
-
-            try {
-                \Illuminate\Support\Facades\Mail::to($correo)
-                    ->send(new \App\Mail\EnviarQRMail($qr));
-                $enviados++;
-            } catch (\Throwable $e) {
-                $errores++;
-                \Illuminate\Support\Facades\Log::error('Error enviando QR API: ' . $e->getMessage());
-            }
-        }
-
-        if ($enviados === 0) {
-            return response()->json([
-                'message' => 'No se pudo enviar el QR.',
-                'data'    => null,
-            ], 500);
-        }
-
-        return response()->json([
-            'message' => "QR enviado correctamente a {$enviados} visitante(s).",
-            'data'    => ['enviados' => $enviados, 'errores' => $errores],
-        ]);
-    }
-
-    // Reenviar QR (máximo 3 veces)
-    public function reenviarQR($id)
-    {
-        $solicitud = Solicitud::with(['solicitudVisitantes.qr', 'solicitudVisitantes.visitante'])
-            ->findOrFail($id);
-
-        if (($solicitud->reenvios_qr ?? 0) >= 3) {
-            return response()->json([
-                'message' => 'Se alcanzo el limite de 3 reenvios.',
-                'data'    => ['reenvios_restantes' => 0],
-            ], 422);
-        }
-
-        if (now() > \Carbon\Carbon::parse($solicitud->fecha_inicio)) {
-            return response()->json([
-                'message' => 'No se puede reenviar el QR, la fecha de la visita ya paso.',
-                'data'    => null,
-            ], 422);
-        }
-
-        $enviados = 0;
-
-        foreach ($solicitud->solicitudVisitantes as $sv) {
-            $qr     = $sv->qr;
-            $correo = $sv->visitante->correo_personal ?? null;
-
-            if (!$qr || !$correo) continue;
-
-            try {
-                \Illuminate\Support\Facades\Mail::to($correo)
-                    ->send(new \App\Mail\EnviarQRMail($qr));
-                $enviados++;
-            } catch (\Throwable $e) {
-                \Illuminate\Support\Facades\Log::error('Error reenviando QR API: ' . $e->getMessage());
-            }
-        }
-
-        $solicitud->increment('reenvios_qr');
-        $restantes = 3 - $solicitud->reenvios_qr;
-
-        return response()->json([
-            'message' => "QR reenviado. Reenvios restantes: {$restantes}",
-            'data'    => ['reenvios_restantes' => $restantes],
-        ]);
-    }
-
-    // Extender QR vencido
-    public function extenderQR(Request $request, $id)
-    {
-        $solicitud = Solicitud::with('solicitudVisitantes.qr')->findOrFail($id);
-        $minutos   = $request->input('minutos_extra', 60);
-        $extendidos = 0;
-
-        foreach ($solicitud->solicitudVisitantes as $sv) {
-            if ($sv->qr && in_array($sv->qr->id_estadoQr, [1, 2])) {
-                $sv->qr->update([
-                    'vigencia_final' => \Carbon\Carbon::parse($sv->qr->vigencia_final)->addMinutes($minutos),
-                    'id_estadoQr'    => 3, // Extendido
-                ]);
-                $extendidos++;
-            }
-        }
-
-        return response()->json([
-            'message' => "QR extendido {$minutos} minutos para {$extendidos} visitante(s).",
-            'data'    => ['minutos_extra' => $minutos, 'extendidos' => $extendidos],
-        ]);
-    }
-
-    // Visitas activas del solicitante
-    public function activas(Request $request)
-    {
-        $idEmpleado = $request->user()->idSam();
-
-        $solicitudes = Solicitud::where('id_solicitante', $idEmpleado)
-            ->where('id_estado_solicitud', 2)
-            ->where('fecha_inicio', '>=', now())
-            ->with(['visitantes', 'estado', 'tipo'])
-            ->get();
-
-        $data = $solicitudes->map(function ($s) {
-            return [
-                'id_solicitud'     => $s->id_solicitud,
-                'folio'            => $s->folio,
-                'fecha_inicio'     => $s->fecha_inicio,
-                'lugar_encuentro'  => $s->lugar_encuentro,
-                'motivo_visita'    => $s->motivo_visita,
-                'estado'           => $s->estado->nombre ?? '',
-                'tipo'             => $s->tipo->nombre ?? '',
-                'visitantes'       => $s->visitantes->map(fn($v) => [
-                    'nombre'          => $v->nombre,
-                    'apellidos'       => $v->apellidos,
-                    'correo_personal' => $v->correo_personal,
-                ]),
-            ];
-        });
-
-        return response()->json([
-            'message' => 'Visitas activas obtenidas correctamente.',
-            'data'    => $data,
-        ]);
-    }
-
-
-//************************************************
-    
-
-
-
 }
