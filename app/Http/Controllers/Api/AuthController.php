@@ -10,9 +10,8 @@
  * ID: 1 | Fecha: 07/05/2026 | Descripción: Creación inicial
  * ID: 2 | Fecha: 25/05/2026 | Descripción: Asignación automática de rol
  * ID: 3 | Fecha: 26/05/2026 | Descripción: Fix búsqueda usuario SAM con dominio
- *                                           Fix password oculto en modelo Empleado
- *                                           Rol granular para app móvil e inclusión de rol_api
  * ID: 4 | Fecha: 27/05/2026 | Descripción: Ajuste nombres de departamentos autorizadores
+ * ID: 5 | Fecha: 29/05/2026 | Descripción: Fix búsqueda por name — respeta roles manuales
  */
 namespace App\Http\Controllers\Api;
 
@@ -32,27 +31,14 @@ class AuthController extends Controller
             'password' => 'required|string',
         ]);
 
-        // SAM guarda solo el nombre de usuario sin dominio (ej: "mauro")
-        // Si Flutter manda "mauro@toluca.tecnm.mx", extraemos solo "mauro"
         $usuarioInput = $request->usuario;
         if (str_contains($usuarioInput, '@')) {
             $usuarioInput = explode('@', $usuarioInput)[0];
         }
 
-        // Buscar empleado en SAM con el usuario limpio (sin dominio)
         $empleado = Empleado::where('usuario', $usuarioInput)
             ->where('estatus', 'Activo')
             ->first();
-
-        // Log temporal para depuración
-        \Log::info('DEBUG LOGIN', [
-            'usuarioInput'    => $usuarioInput,
-            'encontrado'      => $empleado ? 'SI' : 'NO',
-            'passwordSam'     => $empleado?->getAttributes()['password'] ?? 'NULL',
-            'hashIngresado'   => hash('sha256', $request->password),
-            'passwordRequest' => $request->password, // ← quitar después
-            'coincide'        => ($empleado?->getAttributes()['password'] === hash('sha256', $request->password)),
-        ]);
 
         if (!$empleado) {
             return response()->json([
@@ -61,7 +47,6 @@ class AuthController extends Controller
             ], 401);
         }
 
-        // Validar contraseña (SHA-256, formato del SAM)
         $passwordSam = $empleado->getAttributes()['password'] ?? null;
         if (!$passwordSam || $passwordSam !== hash('sha256', $request->password)) {
             return response()->json([
@@ -70,48 +55,49 @@ class AuthController extends Controller
             ], 401);
         }
 
-        // El User local de Laravel necesita email con dominio
-        $emailLocal = $usuarioInput . '@toluca.tecnm.mx';
+        // Buscar por name (usuario SAM) — respeta el email y rol que ya tenga
+        $user = User::where('name', $usuarioInput)->first();
 
-        // Crear o buscar usuario local en Laravel
-        $user = User::firstOrCreate(
-            ['email' => $emailLocal],
-            [
-                'name'            => $empleado->nombre . ' ' . $empleado->apellidoPa,
-                'email'           => $emailLocal,
+        if (!$user) {
+            $user = User::create([
+                'name'            => $usuarioInput,
+                'email'           => $usuarioInput . '@toluca.tecnm.mx',
                 'password'        => bcrypt($request->password),
                 'id_empleado_sam' => $empleado->id_empleado,
-            ]
-        );
+            ]);
+        }
 
         if (!$user->id_empleado_sam) {
             $user->update(['id_empleado_sam' => $empleado->id_empleado]);
         }
 
-        // Determinar rol: autorizador si es jefe O pertenece a depto autorizador
-        $esJefe = (int) $empleado->jefe === 1;
+        // Solo asignar rol si no tiene ninguno — respeta roles manuales
+        if ($user->roles->isEmpty()) {
+            $esJefe = (int) $empleado->jefe === 1;
 
-        $departamentosAutorizadores = DB::connection('sam')
-            ->table('departamento')
-            ->where(function ($q) {
-                $q->whereRaw('LOWER(nombre) LIKE ?', ['%recursos humanos%'])
-                  ->orWhereRaw('LOWER(nombre) LIKE ?', ['%recursos materiales%'])
-                  ->orWhereRaw('LOWER(nombre) LIKE ?', ['%comunicacion y difusion%'])
-                  ->orWhereRaw('LOWER(nombre) LIKE ?', ['%desarrollo academico%']);
-            })
-            ->pluck('id_departamento')
-            ->toArray();
+            $departamentosAutorizadores = DB::connection('sam')
+                ->table('departamento')
+                ->where(function ($q) {
+                    $q->whereRaw('LOWER(nombre) LIKE ?', ['%recursos humanos%'])
+                      ->orWhereRaw('LOWER(nombre) LIKE ?', ['%recursos materiales%'])
+                      ->orWhereRaw('LOWER(nombre) LIKE ?', ['%comunicacion y difusion%'])
+                      ->orWhereRaw('LOWER(nombre) LIKE ?', ['%desarrollo academico%']);
+                })
+                ->pluck('id_departamento')
+                ->toArray();
 
-        $esDeptoAutorizador = in_array((int) $empleado->id_departamento, $departamentosAutorizadores, true);
-        $rolNuevo = ($esJefe || $esDeptoAutorizador) ? 'autorizador' : 'solicitante';
+            $esDeptoAutorizador = in_array((int) $empleado->id_departamento, $departamentosAutorizadores, true);
+            $rol = ($esJefe || $esDeptoAutorizador) ? 'autorizador' : 'solicitante';
 
-        // Asegura que el rol exista antes de asignarlo (evita crash de Spatie)
-        \Spatie\Permission\Models\Role::firstOrCreate(
-            ['name' => $rolNuevo, 'guard_name' => 'web']
-        );
+            \Spatie\Permission\Models\Role::firstOrCreate(
+                ['name' => $rol, 'guard_name' => 'web']
+            );
 
-        // syncRoles reemplaza cualquier rol anterior
-        $user->syncRoles([$rolNuevo]);
+            $user->assignRole($rol);
+        }
+
+        // Usar el rol real de BD para la respuesta
+        $rolFinal = $user->getRoleNames()->first() ?? 'solicitante';
 
         $token = $user->createToken('flutter-token')->plainTextToken;
 
@@ -123,8 +109,8 @@ class AuthController extends Controller
                 'id_empleado_sam' => $empleado->id_empleado,
                 'name'            => $empleado->nombre . ' ' . $empleado->apellidoPa,
                 'email'           => $user->email,
-                'rol'             => $rolNuevo,
-                'rol_api'         => $rolNuevo,
+                'rol'             => $rolFinal,
+                'rol_api'         => $rolFinal,
                 'id_departamento' => $empleado->id_departamento,
                 'departamento'    => '',
             ],

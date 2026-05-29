@@ -10,6 +10,12 @@
             </div>
         @endif
 
+        @if(session('error'))
+            <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4 flex items-center gap-2">
+                <i class="fas fa-exclamation-circle"></i> {{ session('error') }}
+            </div>
+        @endif
+
         <div class="bg-white shadow-sm rounded-lg p-6">
 
             {{-- Filtros --}}
@@ -40,8 +46,10 @@
             </div>
 
             @forelse($solicitudes as $s)
-            <div class="border rounded-xl p-4 mb-4 transition hover:shadow-md"
-                 style="border-color: #A9AAAD; background-color: #FFF3EC;">
+            @php $fechaPasada = now() > \Carbon\Carbon::parse($s->fecha_inicio); @endphp
+            <div class="border rounded-xl p-4 mb-4 transition hover:shadow-md {{ $fechaPasada && $s->estado->nombre == 'Pendiente' ? 'opacity-70' : '' }}"
+                 style="border-color: {{ $fechaPasada && $s->estado->nombre == 'Pendiente' ? '#e5e7eb' : '#A9AAAD' }}; background-color: {{ $fechaPasada && $s->estado->nombre == 'Pendiente' ? '#f9fafb' : '#FFF3EC' }};">
+
                 <div class="grid grid-cols-3 gap-4 mb-3">
                     <div>
                         <p class="text-xs font-semibold flex items-center gap-1" style="color: #A9AAAD;">
@@ -53,7 +61,14 @@
                         <p class="text-xs font-semibold flex items-center gap-1" style="color: #A9AAAD;">
                             <i class="fas fa-calendar"></i> Fecha de Visita
                         </p>
-                        <p class="font-semibold text-omg-slate">{{ $s->fecha_inicio }}</p>
+                        <p class="font-semibold text-omg-slate">
+                            {{ \Carbon\Carbon::parse($s->fecha_inicio)->format('d/m/Y H:i') }}
+                            @if($fechaPasada)
+                                <span class="block text-xs text-red-500 font-semibold mt-0.5">
+                                    <i class="fas fa-clock mr-1"></i> Fecha vencida
+                                </span>
+                            @endif
+                        </p>
                     </div>
                     <div>
                         <p class="text-xs font-semibold flex items-center gap-1" style="color: #A9AAAD;">
@@ -90,23 +105,42 @@
                 </div>
 
                 @if($s->estado->nombre == 'Pendiente')
-                <div class="flex justify-end gap-3">
-                    <form action="{{ route('autorizador.rechazar', $s->id_solicitud) }}" method="POST">
-                        @csrf
-                        <button type="submit"
-                            class="bg-red-600 text-white px-4 py-2 rounded-lg hover:opacity-90 font-heading font-semibold flex items-center gap-2">
-                            <i class="fas fa-times-circle"></i> Rechazar
-                        </button>
-                    </form>
-                    <form action="{{ route('autorizador.autorizar', $s->id_solicitud) }}" method="POST">
-                        @csrf
-                        <button type="submit"
-                            class="text-white px-4 py-2 rounded-lg hover:opacity-90 font-heading font-semibold flex items-center gap-2"
-                            style="background-color: #DA7E2D;">
-                            <i class="fas fa-check-circle"></i> Autorizar
-                        </button>
-                    </form>
-                </div>
+                    @if($fechaPasada)
+                        {{-- Fecha vencida --}}
+                        <div class="flex justify-between items-center">
+                            <span class="text-xs text-red-500 font-semibold flex items-center gap-1 px-3 py-2 bg-red-50 rounded-lg border border-red-200">
+                                <i class="fas fa-ban"></i> Esta solicitud ya no puede autorizarse — la fecha de visita venció
+                            </span>
+                            {{-- Botón rechazar para limpiar la lista --}}
+                            <form action="{{ route('autorizador.rechazar', $s->id_solicitud) }}" method="POST"
+                                onsubmit="return confirm('La fecha ya venció. ¿Rechazar esta solicitud?')">
+                                @csrf
+                                <button type="submit"
+                                    class="bg-gray-400 text-white px-3 py-1 rounded-lg hover:opacity-90 text-xs flex items-center gap-1">
+                                    <i class="fas fa-times-circle"></i> Rechazar y cerrar
+                                </button>
+                            </form>
+                        </div>
+                    @else
+                        {{-- Botones normales --}}
+                        <div class="flex justify-end gap-3">
+                            <form action="{{ route('autorizador.rechazar', $s->id_solicitud) }}" method="POST">
+                                @csrf
+                                <button type="submit"
+                                    class="bg-red-600 text-white px-4 py-2 rounded-lg hover:opacity-90 font-heading font-semibold flex items-center gap-2">
+                                    <i class="fas fa-times-circle"></i> Rechazar
+                                </button>
+                            </form>
+                            <form action="{{ route('autorizador.autorizar', $s->id_solicitud) }}" method="POST">
+                                @csrf
+                                <button type="submit"
+                                    class="text-white px-4 py-2 rounded-lg hover:opacity-90 font-heading font-semibold flex items-center gap-2"
+                                    style="background-color: #DA7E2D;">
+                                    <i class="fas fa-check-circle"></i> Autorizar
+                                </button>
+                            </form>
+                        </div>
+                    @endif
                 @endif
             </div>
             @empty
