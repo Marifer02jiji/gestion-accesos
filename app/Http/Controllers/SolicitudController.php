@@ -9,16 +9,16 @@ use App\Models\Solicitud;
 use App\Models\SolicitudVisitante;
 use App\Models\Visitante;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
 
 class SolicitudController extends Controller
 {
-    // Obtener ID del empleado SAM del usuario autenticado
     private function idEmpleado(): int
     {
         return Auth::user()->idSam();
     }
 
-    // Listado de solicitudes del solicitante
     public function index()
     {
         $solicitudes = Solicitud::where('id_solicitante', $this->idEmpleado())
@@ -29,14 +29,12 @@ class SolicitudController extends Controller
         return view('solicitudes.index', compact('solicitudes'));
     }
 
-    // Formulario de nueva solicitud
     public function create()
     {
         $tipos = CaTipoSolicitud::all();
         return view('solicitudes.create', compact('tipos'));
     }
 
-    // Guardar nueva solicitud
     public function store(StoreSolicitudRequest $request)
     {
         $solicitud = Solicitud::create([
@@ -71,7 +69,6 @@ class SolicitudController extends Controller
             ->with('success', "Solicitud creada correctamente. Folio: {$solicitud->folio}");
     }
 
-    // Detalle de solicitud
     public function show($id)
     {
         $solicitud = Solicitud::with(['estado', 'tipo', 'visitantes', 'solicitudVisitantes.qr'])
@@ -80,7 +77,6 @@ class SolicitudController extends Controller
         return view('solicitudes.show', compact('solicitud'));
     }
 
-    // Cancelar solicitud e invalidar QRs
     public function cancelar($id)
     {
         $solicitud = Solicitud::with('solicitudVisitantes.qr')->findOrFail($id);
@@ -90,7 +86,6 @@ class SolicitudController extends Controller
                 ->with('error', 'Esta solicitud no puede cancelarse en su estado actual.');
         }
 
-        // Cancelar todos los QR activos asociados
         foreach ($solicitud->solicitudVisitantes as $sv) {
             if ($sv->qr && $sv->qr->id_estadoQr === 1) {
                 $sv->qr->update(['id_estadoQr' => 4]);
@@ -109,32 +104,65 @@ class SolicitudController extends Controller
 
     public function enviarQR($id)
     {
-        $solicitud = Solicitud::with('solicitudVisitantes.qr')->findOrFail($id);
+        $solicitud = Solicitud::with(['solicitudVisitantes.qr', 'solicitudVisitantes.visitante'])
+            ->findOrFail($id);
 
+        // Solo solicitudes autorizadas
         if ($solicitud->id_estado_solicitud !== 2) {
             return redirect()->route('solicitudes.show', $id)
-                ->with('error', 'Solo se puede enviar el QR cuando la solicitud está autorizada.');
+                ->with('error', 'Solo se puede enviar el QR cuando la solicitud esta autorizada.');
         }
 
-        $qr = $solicitud->solicitudVisitantes->first()?->qr;
+        // Validar que la visita no haya expirado (fecha + tolerancia_despues)
+        $fechaExpiracion = \Carbon\Carbon::parse($solicitud->fecha_inicio)
+            ->addMinutes($solicitud->tolerancia_despues ?? 15);
 
-        if (!$qr) {
+        if (now() > $fechaExpiracion) {
             return redirect()->route('solicitudes.show', $id)
-                ->with('error', 'No se encontró un QR asociado a esta solicitud.');
+                ->with('error', 'No se puede enviar el QR, la visita ya expiro.');
         }
 
-        return redirect()->route('solicitudes.qr', $id)
-            ->with('success', 'QR listo para compartir con el visitante.');
+        $enviados = 0;
+        $errores  = 0;
+
+        foreach ($solicitud->solicitudVisitantes as $sv) {
+            $qr     = $sv->qr;
+            $correo = $sv->visitante->correo_personal ?? null;
+
+            if (!$qr || !$correo) continue;
+
+            try {
+                Mail::to($correo)->send(new \App\Mail\EnviarQRMail($qr));
+                $enviados++;
+            } catch (\Throwable $e) {
+                $errores++;
+                Log::error('Error enviando QR: ' . $e->getMessage());
+            }
+        }
+
+        if ($enviados > 0 && $errores === 0) {
+            return redirect()->route('solicitudes.show', $id)
+                ->with('success', "QR enviado correctamente a {$enviados} visitante(s).");
+        }
+
+        if ($enviados > 0 && $errores > 0) {
+            return redirect()->route('solicitudes.show', $id)
+                ->with('success', "QR enviado a {$enviados} visitante(s). {$errores} no pudieron enviarse.");
+        }
+
+        return redirect()->route('solicitudes.show', $id)
+            ->with('error', 'No se pudo enviar el QR. Revisa los logs en storage/logs/laravel.log');
     }
 
-    // Eliminar solicitud cancelada o rechazada
     public function destroy($id)
     {
         $solicitud = Solicitud::findOrFail($id);
 
-        if (!in_array($solicitud->id_estado_solicitud, [3, 4])) {
+        $fechaPasada = now() > \Carbon\Carbon::parse($solicitud->fecha_inicio);
+
+        if (!in_array($solicitud->id_estado_solicitud, [3, 4]) && !$fechaPasada) {
             return redirect()->route('solicitudes.index')
-                ->with('error', 'Solo se pueden eliminar solicitudes canceladas o rechazadas.');
+                ->with('error', 'Solo se pueden eliminar solicitudes canceladas, rechazadas o con fecha pasada.');
         }
 
         $solicitud->visitantes()->detach();
