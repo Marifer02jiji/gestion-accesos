@@ -184,8 +184,8 @@
         {{-- Script de inactividad --}}
         @if(Auth::check())
         <script>
-            const MINUTOS_INACTIVIDAD = 20;
-            const SEGUNDOS_ADVERTENCIA = 60;
+            const MINUTOS_INACTIVIDAD = 15;
+            const SEGUNDOS_ADVERTENCIA = 30;
 
             let timerInactividad;
             let timerCuentaRegresiva;
