@@ -81,7 +81,7 @@
 
                     <td class="px-4 py-2">
                         @if($masde10hrs)
-                            <form action="{{ route('vigilante.salida') }}" method="POST"
+                            <form action="{{ route('admin.registrarSalida') }}" method="POST"
                                 onsubmit="return confirm('¿Registrar salida forzada de este visitante?')">
                                 @csrf
                                 <input type="hidden" name="id_qr" value="{{ $r->id_qr }}">

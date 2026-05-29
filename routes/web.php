@@ -56,6 +56,8 @@ Route::middleware(['auth', 'role:administrador'])->group(function () {
     Route::post('/admin/exclusiones', [AdminController::class, 'storeExclusion'])->name('admin.exclusiones.store');
     Route::delete('/admin/exclusiones/{id}', [AdminController::class, 'destroyExclusion'])->name('admin.exclusiones.destroy');
     Route::get('/admin/visitantes-activos', [AdminController::class, 'visitantesActivos'])->name('admin.visitantes-activos');
+    Route::post('/admin/registrar-salida', [AdminController::class, 'registrarSalida'])->name('admin.registrarSalida');
+
 });
 
 Route::middleware('auth')->group(function () {

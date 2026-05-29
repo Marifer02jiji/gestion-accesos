@@ -72,7 +72,10 @@ class AdminController extends Controller
 
     public function visitantesActivos()
     {
-        $visitantes = RegistroAcceso::with(['qr.solicitudVisitante.visitante'])
+        $visitantes = RegistroAcceso::with([
+            'qr.solicitudVisitante.visitante',
+            'qr.solicitudVisitante.solicitud.solicitante',
+        ])
             ->whereNull('hora_salida_institucion')
             ->whereNotNull('hora_llegada_institucion')
             ->orderBy('hora_llegada_institucion', 'desc')
@@ -80,4 +83,37 @@ class AdminController extends Controller
 
         return view('admin.visitantes-activos', compact('visitantes'));
     }
+
+
+
+        
+        public function registrarSalida(Request $request)
+    {
+        $request->validate(['id_qr' => 'required|integer']);
+
+        $registro = RegistroAcceso::where('id_qr', $request->id_qr)
+            ->whereNull('hora_salida_institucion')
+            ->orderBy('id_registro', 'desc')
+            ->first();
+
+        if (!$registro) {
+            return redirect()->route('admin.visitantes-activos')
+                ->with('error', 'No se encontró entrada registrada.');
+        }
+
+        $registro->update([
+            'hora_salida_institucion' => now(),
+            'telefono_vigilante'      => '0000000000',
+            'area_vigilante'          => 'Admin — Salida forzada',
+        ]);
+
+        \App\Models\QR::where('id_qr', $request->id_qr)->update(['id_estadoQr' => 3]);
+
+        return redirect()->route('admin.visitantes-activos')
+            ->with('success', 'Salida registrada correctamente.');
+    }
+
+
+
+
 }
