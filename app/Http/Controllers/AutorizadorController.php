@@ -6,6 +6,7 @@ use App\Models\Notificacion;
 use App\Models\QR;
 use App\Models\Solicitud;
 use App\Models\SolicitudVisitante;
+use App\Services\QrCorreoService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -117,12 +118,17 @@ class AutorizadorController extends Controller
             'id_empleado'  => $solicitud->id_solicitante,
             'id_solicitud' => $solicitud->id_solicitud,
             'tipo'         => 'autorizada',
-            'mensaje'      => "Tu solicitud {$solicitud->folio} ha sido autorizada. Ya puedes compartir el codigo QR.",
+            'mensaje'      => "Tu solicitud {$solicitud->folio} ha sido autorizada. Revisa tu correo o comparte el codigo QR.",
             'leida'        => false,
         ]);
 
+        $solicitud->refresh();
+        $correos = QrCorreoService::enviarASolicitud($solicitud);
+        $mensaje = 'Solicitud autorizada y QR generado correctamente. '
+            . QrCorreoService::mensajeResultado($correos);
+
         return redirect()->route('autorizador.index')
-            ->with('success', 'Solicitud autorizada y QR generado correctamente.');
+            ->with($correos['enviados'] > 0 ? 'success' : 'error', $mensaje);
     }
 
     public function rechazar($id)

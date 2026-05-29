@@ -8,9 +8,8 @@ use App\Models\QR;
 use App\Models\Solicitud;
 use App\Models\SolicitudVisitante;
 use App\Models\Visitante;
+use App\Services\QrCorreoService;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Mail;
 
 class SolicitudController extends Controller
 {
@@ -122,36 +121,11 @@ class SolicitudController extends Controller
                 ->with('error', 'No se puede enviar el QR, la visita ya expiro.');
         }
 
-        $enviados = 0;
-        $errores  = 0;
-
-        foreach ($solicitud->solicitudVisitantes as $sv) {
-            $qr     = $sv->qr;
-            $correo = $sv->visitante->correo_personal ?? null;
-
-            if (!$qr || !$correo) continue;
-
-            try {
-                Mail::to($correo)->send(new \App\Mail\EnviarQRMail($qr));
-                $enviados++;
-            } catch (\Throwable $e) {
-                $errores++;
-                Log::error('Error enviando QR: ' . $e->getMessage());
-            }
-        }
-
-        if ($enviados > 0 && $errores === 0) {
-            return redirect()->route('solicitudes.show', $id)
-                ->with('success', "QR enviado correctamente a {$enviados} visitante(s).");
-        }
-
-        if ($enviados > 0 && $errores > 0) {
-            return redirect()->route('solicitudes.show', $id)
-                ->with('success', "QR enviado a {$enviados} visitante(s). {$errores} no pudieron enviarse.");
-        }
+        $resultado = QrCorreoService::enviarASolicitud($solicitud);
+        $tipo      = $resultado['enviados'] > 0 ? 'success' : 'error';
 
         return redirect()->route('solicitudes.show', $id)
-            ->with('error', 'No se pudo enviar el QR. Revisa los logs en storage/logs/laravel.log');
+            ->with($tipo, QrCorreoService::mensajeResultado($resultado));
     }
 
     public function destroy($id)

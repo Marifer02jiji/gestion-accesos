@@ -31,15 +31,19 @@
                             <p style="margin:0 0 8px;"><strong>Lugar de encuentro:</strong> {{ $solicitud->lugar_encuentro }}</p>
                             <p style="margin:0 0 20px;"><strong>Vigencia del QR:</strong> {{ $qr->vigencia_inicio }} -- {{ $qr->vigencia_final }}</p>
 
-                            {{-- Texto indicando que el QR va adjunto --}}
+                            {{-- QR embebido en el cuerpo + adjunto PNG --}}
                             <table width="100%" cellpadding="0" cellspacing="0">
                                 <tr>
                                     <td align="center" style="padding:16px;background:#FFF3EC;border-radius:8px;border:2px dashed #DA7E2D;">
-                                        <p style="margin:0 0 8px;font-size:14px;color:#DA7E2D;font-weight:bold;">
-                                            El codigo QR viene adjunto en este correo
+                                        <p style="margin:0 0 12px;font-size:14px;color:#DA7E2D;font-weight:bold;">
+                                            Presenta este codigo QR en la entrada
                                         </p>
-                                        <p style="margin:0;font-size:12px;color:#666;">
-                                            Abre el archivo adjunto "codigo-qr.png" y presentalo en la entrada.
+                                        <img src="data:image/png;base64,{{ $qrPngBase64 }}"
+                                             alt="Codigo QR de acceso"
+                                             width="220" height="220"
+                                             style="display:block;margin:0 auto;border:4px solid #ffffff;border-radius:4px;">
+                                        <p style="margin:12px 0 0;font-size:12px;color:#666;">
+                                            Tambien puedes usar el archivo adjunto <strong>codigo-qr.png</strong>.
                                         </p>
                                     </td>
                                 </tr>

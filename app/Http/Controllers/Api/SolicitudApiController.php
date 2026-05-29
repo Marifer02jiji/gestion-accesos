@@ -9,11 +9,10 @@ use App\Models\QR;
 use App\Models\Solicitud;
 use App\Models\SolicitudVisitante;
 use App\Models\Visitante;
-use App\Mail\EnviarQRMail;
+use App\Services\QrCorreoService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Mail;
 
 class SolicitudApiController extends Controller
 {
@@ -225,27 +224,19 @@ class SolicitudApiController extends Controller
             return response()->json(['message' => 'No se puede enviar el QR, la vigencia de la visita ya paso.', 'data' => null], 422);
         }
 
-        $enviados = 0;
-        $errores  = 0;
+        $resultado = QrCorreoService::enviarASolicitud($solicitud);
 
-        foreach ($solicitud->solicitudVisitantes as $sv) {
-            $qr     = $sv->qr;
-            $correo = $sv->visitante->correo_personal ?? null;
-            if (!$qr || !$correo) continue;
-            try {
-                Mail::to($correo)->send(new EnviarQRMail($qr));
-                $enviados++;
-            } catch (\Throwable $e) {
-                $errores++;
-                Log::error('Error enviando QR API: ' . $e->getMessage());
-            }
+        if ($resultado['enviados'] === 0) {
+            return response()->json([
+                'message' => QrCorreoService::mensajeResultado($resultado),
+                'data'    => $resultado,
+            ], 500);
         }
 
-        if ($enviados === 0) {
-            return response()->json(['message' => 'No se pudo enviar el QR.', 'data' => ['enviados' => 0, 'errores' => $errores]], 500);
-        }
-
-        return response()->json(['message' => "QR enviado correctamente a {$enviados} visitante(s).", 'data' => ['enviados' => $enviados, 'errores' => $errores]]);
+        return response()->json([
+            'message' => QrCorreoService::mensajeResultado($resultado),
+            'data'    => $resultado,
+        ]);
     }
 
     public function reenviarQR($id)
@@ -260,31 +251,23 @@ class SolicitudApiController extends Controller
             return response()->json(['message' => 'No se puede reenviar el QR, la vigencia ya paso.', 'data' => null], 422);
         }
 
-        $enviados = 0;
-        $errores  = 0;
+        $resultado = QrCorreoService::enviarASolicitud($solicitud);
 
-        foreach ($solicitud->solicitudVisitantes as $sv) {
-            $qr     = $sv->qr;
-            $correo = $sv->visitante->correo_personal ?? null;
-            if (!$qr || !$correo) continue;
-            try {
-                Mail::to($correo)->send(new EnviarQRMail($qr));
-                $enviados++;
-            } catch (\Throwable $e) {
-                $errores++;
-                Log::error('Error reenviando QR API: ' . $e->getMessage());
-            }
-        }
-
-        if ($enviados === 0) {
-            return response()->json(['message' => 'No se pudo reenviar el QR.', 'data' => ['enviados' => 0, 'errores' => $errores]], 500);
+        if ($resultado['enviados'] === 0) {
+            return response()->json([
+                'message' => QrCorreoService::mensajeResultado($resultado),
+                'data'    => $resultado,
+            ], 500);
         }
 
         $solicitud->increment('reenvios_qr');
         $solicitud->refresh();
         $restantes = 3 - ($solicitud->reenvios_qr ?? 0);
 
-        return response()->json(['message' => "QR reenviado. Reenvios restantes: {$restantes}", 'data' => ['reenvios_restantes' => $restantes, 'enviados' => $enviados, 'errores' => $errores]]);
+        return response()->json([
+            'message' => 'QR reenviado. Reenvios restantes: ' . $restantes . '. ' . QrCorreoService::mensajeResultado($resultado),
+            'data'    => array_merge($resultado, ['reenvios_restantes' => $restantes]),
+        ]);
     }
 
     public function extenderQR(Request $request, $id)
@@ -393,14 +376,18 @@ class SolicitudApiController extends Controller
             'id_empleado'  => $solicitud->id_solicitante,
             'id_solicitud' => $solicitud->id_solicitud,
             'tipo'         => 'autorizada',
-            'mensaje'      => "Tu solicitud {$solicitud->folio} ha sido autorizada.",
+            'mensaje'      => "Tu solicitud {$solicitud->folio} ha sido autorizada. Revisa el correo del visitante.",
             'leida'        => false,
         ]);
 
-        $solicitud = Solicitud::with(['estado', 'tipo', 'visitantes', 'solicitante'])->findOrFail($id);
+        $solicitud = Solicitud::with(['estado', 'tipo', 'visitantes', 'solicitante', 'solicitudVisitantes.qr', 'solicitudVisitantes.visitante'])->findOrFail($id);
+        $correos   = QrCorreoService::enviarASolicitud($solicitud);
         $this->formatearSolicitudParaMovil($solicitud);
 
-        return response()->json(['message' => 'Solicitud autorizada correctamente.', 'data' => $solicitud]);
+        return response()->json([
+            'message' => 'Solicitud autorizada correctamente. ' . QrCorreoService::mensajeResultado($correos),
+            'data'    => array_merge($solicitud->toArray(), ['correos_qr' => $correos]),
+        ]);
     }
 
     public function rechazar($id)
