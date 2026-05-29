@@ -49,8 +49,35 @@ class SolicitudApiController extends Controller
         };
     }
 
+    private function fechaVencimientoSolicitud(Solicitud $solicitud): Carbon
+    {
+        return Carbon::parse($solicitud->fecha_inicio)
+            ->addMinutes((int) $solicitud->tolerancia_despues);
+    }
+
+    private function solicitudYaVencio(Solicitud $solicitud): bool
+    {
+        return now()->greaterThan($this->fechaVencimientoSolicitud($solicitud));
+    }
+
+    private function cancelarPendientesVencidas(): void
+    {
+        Solicitud::where('id_estado_solicitud', 1)
+            ->get()
+            ->each(function ($solicitud) {
+                if ($this->solicitudYaVencio($solicitud)) {
+                    $solicitud->update([
+                        'id_estado_solicitud' => 4,
+                        'fecha_cancelacion'   => now(),
+                    ]);
+                }
+            });
+    }
+
     public function index(Request $request)
     {
+        $this->cancelarPendientesVencidas();
+
         $query = Solicitud::where('id_solicitante', $this->idEmpleado())
             ->with([
                 'estado',
@@ -150,6 +177,8 @@ class SolicitudApiController extends Controller
 
     public function show($id)
     {
+        $this->cancelarPendientesVencidas();
+
         $solicitud = Solicitud::with([
             'estado',
             'tipo',
@@ -237,9 +266,9 @@ class SolicitudApiController extends Controller
             ], 422);
         }
 
-        if (now() > Carbon::parse($solicitud->fecha_inicio)) {
+        if ($this->solicitudYaVencio($solicitud)) {
             return response()->json([
-                'message' => 'No se puede enviar el QR, la fecha de la visita ya pasó.',
+                'message' => 'No se puede enviar el QR, la vigencia de la visita ya pasó.',
                 'data'    => null,
             ], 422);
         }
@@ -297,9 +326,9 @@ class SolicitudApiController extends Controller
             ], 422);
         }
 
-        if (now() > Carbon::parse($solicitud->fecha_inicio)) {
+        if ($this->solicitudYaVencio($solicitud)) {
             return response()->json([
-                'message' => 'No se puede reenviar el QR, la fecha de la visita ya pasó.',
+                'message' => 'No se puede reenviar el QR, la vigencia de la visita ya pasó.',
                 'data'    => null,
             ], 422);
         }
@@ -390,9 +419,12 @@ class SolicitudApiController extends Controller
 
         $solicitudes = Solicitud::where('id_solicitante', $idEmpleado)
             ->where('id_estado_solicitud', 2)
-            ->where('fecha_inicio', '>=', now())
             ->with(['visitantes', 'estado', 'tipo'])
-            ->get();
+            ->get()
+            ->filter(function ($solicitud) {
+                return !$this->solicitudYaVencio($solicitud);
+            })
+            ->values();
 
         $data = $solicitudes->map(function ($s) {
             return [
@@ -419,7 +451,9 @@ class SolicitudApiController extends Controller
 
     public function pendientes(Request $request)
     {
-        $filtro = $request->get('filtro', 'pendientes');
+        $this->cancelarPendientesVencidas();
+
+        $filtro = strtolower($request->get('filtro', 'pendientes'));
 
         $query = Solicitud::with([
             'estado',
@@ -429,10 +463,11 @@ class SolicitudApiController extends Controller
         ]);
 
         match ($filtro) {
-            'aprobadas'  => $query->where('id_estado_solicitud', 2),
-            'rechazadas' => $query->where('id_estado_solicitud', 3),
-            'todos'      => null,
-            default      => $query->where('id_estado_solicitud', 1),
+            'autorizadas', 'aprobadas' => $query->where('id_estado_solicitud', 2),
+            'rechazadas'              => $query->where('id_estado_solicitud', 3),
+            'canceladas'              => $query->where('id_estado_solicitud', 4),
+            'todas', 'todos'          => null,
+            default                   => $query->where('id_estado_solicitud', 1),
         };
 
         $solicitudes = $query
@@ -453,14 +488,29 @@ class SolicitudApiController extends Controller
     {
         $solicitud = Solicitud::with('solicitudVisitantes.visitante')->findOrFail($id);
 
-        if ($solicitud->id_estado_solicitud !== 1) {
+        if ((int) $solicitud->id_estado_solicitud !== 1) {
             return response()->json([
                 'message' => 'Esta solicitud ya fue procesada.',
                 'data'    => null,
             ], 422);
         }
 
-        $solicitud->update(['id_estado_solicitud' => 2]);
+        if ($this->solicitudYaVencio($solicitud)) {
+            $solicitud->update([
+                'id_estado_solicitud' => 4,
+                'fecha_cancelacion'   => now(),
+            ]);
+
+            return response()->json([
+                'message' => 'Esta solicitud ya venció y fue cancelada automáticamente.',
+                'data'    => null,
+            ], 422);
+        }
+
+        $solicitud->update([
+            'id_estado_solicitud' => 2,
+            'id_autorizador'      => $this->idEmpleado(),
+        ]);
 
         foreach ($solicitud->solicitudVisitantes as $sv) {
             if ($sv->qr) {
@@ -514,7 +564,7 @@ class SolicitudApiController extends Controller
     {
         $solicitud = Solicitud::findOrFail($id);
 
-        if ($solicitud->id_estado_solicitud !== 1) {
+        if ((int) $solicitud->id_estado_solicitud !== 1) {
             return response()->json([
                 'message' => 'Esta solicitud ya fue procesada.',
                 'data'    => null,
