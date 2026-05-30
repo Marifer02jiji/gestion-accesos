@@ -195,6 +195,8 @@ class VigilanteApiController extends Controller
         return response()->json(['data' => $visitas]);
     }
 
+
+        
     public function escanear(Request $request): JsonResponse
     {
         $validador = Validator::make($request->all(), [
@@ -231,7 +233,7 @@ class VigilanteApiController extends Controller
 
         $accionDisponible = $registroActivo ? 'salida' : 'entrada';
 
-        // Solo validar vigencia si va a ENTRAR — si va a SALIR dejarlo pasar
+        // Solo validar vigencia si va a ENTRAR
         if ($accionDisponible === 'entrada') {
             if (now()->lt($qr->vigencia_inicio) || now()->gt($qr->vigencia_final)) {
                 return response()->json([
@@ -239,6 +241,8 @@ class VigilanteApiController extends Controller
                 ], 200);
             }
         }
+
+        $solicitud = $qr->solicitudVisitante->solicitud;
 
         try {
             if ($accionDisponible === 'entrada') {
@@ -249,6 +253,19 @@ class VigilanteApiController extends Controller
                     'area_vigilante'           => $area,
                 ]);
                 $qr->update(['id_estadoQr' => 2]);
+
+                // Cambiar estado solicitud a "En Institución" (id=5)
+                $solicitud->update(['id_estado_solicitud' => 5]);
+
+                // Notificar al solicitante
+                \App\Models\Notificacion::create([
+                    'id_empleado'  => $solicitud->id_solicitante,
+                    'id_solicitud' => $solicitud->id_solicitud,
+                    'tipo'         => 'entrada',
+                    'mensaje'      => "Tu visitante entró a la institución. Folio: {$solicitud->folio}",
+                    'leida'        => false,
+                ]);
+
             } else {
                 $registroActivo->update([
                     'hora_salida_institucion' => now(),
@@ -256,6 +273,18 @@ class VigilanteApiController extends Controller
                     'area_vigilante'          => $area,
                 ]);
                 $qr->update(['id_estadoQr' => 3]);
+
+                // Cambiar estado solicitud a "Finalizada" (id=8)
+                $solicitud->update(['id_estado_solicitud' => 8]);
+
+                // Notificar al solicitante
+                \App\Models\Notificacion::create([
+                    'id_empleado'  => $solicitud->id_solicitante,
+                    'id_solicitud' => $solicitud->id_solicitud,
+                    'tipo'         => 'salida',
+                    'mensaje'      => "Tu visitante salió de la institución. Folio: {$solicitud->folio}",
+                    'leida'        => false,
+                ]);
             }
         } catch (\Throwable $e) {
             return response()->json([
@@ -264,7 +293,6 @@ class VigilanteApiController extends Controller
         }
 
         $visitante = $qr->solicitudVisitante->visitante;
-        $solicitud = $qr->solicitudVisitante->solicitud;
 
         return response()->json([
             'data' => [
@@ -285,6 +313,9 @@ class VigilanteApiController extends Controller
             ],
         ], 200);
     }
+
+
+
 
     public function registrarEntrada(Request $request): JsonResponse
     {

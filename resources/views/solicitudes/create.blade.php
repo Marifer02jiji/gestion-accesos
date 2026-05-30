@@ -32,11 +32,12 @@
                         <i class="fas fa-tag mr-1"></i> Tipo de Visita
                     </label>
                     <select name="id_tipo_solicitud" id="tipo_solicitud"
-                        class="w-full border border-omg-kashmir rounded px-3 py-2 bg-omg-chardon focus:outline-none focus:ring-2 focus:ring-omg-nile"
-                        onchange="actualizarDireccion()">
-                        <option value="" disabled selected>Seleccione una opción</option>
+                        class="w-full border border-omg-kashmir rounded px-3 py-2 bg-omg-chardon focus:outline-none focus:ring-2 focus:ring-omg-nile">
+                        <option value="" disabled {{ old('id_tipo_solicitud') ? '' : 'selected' }}>Seleccione una opción</option>
                         @foreach($tipos->where('nombre', '!=', 'Consulta') as $tipo)
-                            <option value="{{ $tipo->id_tipo_solicitud }}" data-nombre="{{ $tipo->nombre }}">
+                            <option value="{{ $tipo->id_tipo_solicitud }}"
+                                data-nombre="{{ $tipo->nombre }}"
+                                {{ old('id_tipo_solicitud') == $tipo->id_tipo_solicitud ? 'selected' : '' }}>
                                 {{ $tipo->nombre }}
                             </option>
                         @endforeach
@@ -55,7 +56,8 @@
                         <span class="text-sm text-omg-slate">Individual</span>
                         <label class="relative inline-flex items-center cursor-pointer">
                             <input type="checkbox" id="switch-grupal" class="sr-only peer"
-                                onchange="toggleGrupal()">
+                                onchange="toggleGrupal()"
+                                {{ old('es_grupal') == '1' ? 'checked' : '' }}>
                             <div class="w-11 h-6 bg-omg-kashmir peer-focus:outline-none rounded-full peer
                                 peer-checked:after:translate-x-full peer-checked:bg-omg-coral
                                 after:content-[''] after:absolute after:top-[2px] after:left-[2px]
@@ -64,15 +66,7 @@
                         </label>
                         <span class="text-sm text-omg-slate">Grupal</span>
                     </div>
-                    <input type="hidden" name="es_grupal" id="es_grupal" value="0">
-                </div>
-
-                {{-- Dirección automática según tipo --}}
-                <div id="direccion-info" class="col-span-2 hidden">
-                    <div class="bg-omg-chardon border border-omg-kashmir rounded-lg px-4 py-3 flex items-center gap-2">
-                        <i class="fas fa-info-circle text-omg-nile"></i>
-                        <p class="text-sm text-omg-slate" id="direccion-texto"></p>
-                    </div>
+                    <input type="hidden" name="es_grupal" id="es_grupal" value="{{ old('es_grupal', '0') }}">
                 </div>
 
                 {{-- Fecha --}}
@@ -84,21 +78,31 @@
                         class="w-full border border-omg-kashmir rounded px-3 py-2 bg-omg-chardon focus:outline-none focus:ring-2 focus:ring-omg-nile"
                         value="{{ old('fecha_inicio') }}">
                     <p class="text-xs text-omg-kashmir mt-1">
-                        Puedes agendar para hoy; mínimo 1 hora después de ahora.
+                        Lunes a Viernes 6:00 AM – 9:00 PM · Sábado hasta 2:00 PM · No domingos.
                     </p>
                     @error('fecha_inicio')
                         <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
                     @enderror
                 </div>
 
-                {{-- Lugar --}}
-                <div>
+                {{-- Lugar de encuentro --}}
+                <div class="relative">
                     <label class="block text-sm font-semibold text-omg-slate mb-1">
                         <i class="fas fa-map-marker-alt mr-1"></i> Lugar de Encuentro
                     </label>
-                    <input type="text" name="lugar_encuentro"
+                    <input type="text" id="lugar-search"
+                        placeholder="Escribe para filtrar o selecciona..."
+                        autocomplete="off"
+                        value="{{ old('lugar_encuentro') }}"
                         class="w-full border border-omg-kashmir rounded px-3 py-2 bg-omg-chardon focus:outline-none focus:ring-2 focus:ring-omg-nile"
-                        value="{{ old('lugar_encuentro') }}">
+                        oninput="filtrarLugares(this.value)"
+                        onfocus="mostrarLugares()"
+                        onblur="setTimeout(ocultarLugares, 200)">
+                    <input type="hidden" name="lugar_encuentro" id="lugar_encuentro" value="{{ old('lugar_encuentro') }}">
+                    <ul id="lugares-dropdown"
+                        class="hidden absolute left-0 right-0 bg-white border border-omg-kashmir rounded-lg shadow-lg mt-0 overflow-y-auto"
+                        style="z-index:9999; max-height:210px;  top:calc(100% - 15px);">
+                    </ul>
                     @error('lugar_encuentro')
                         <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
                     @enderror
@@ -114,16 +118,16 @@
                             <label class="block text-xs text-omg-kashmir mb-1">Antes (min)</label>
                             <select name="tolerancia_antes"
                                 class="w-full border border-omg-kashmir rounded px-3 py-2 bg-omg-chardon focus:outline-none focus:ring-2 focus:ring-omg-coral">
-                                <option value="15">15 min</option>
-                                <option value="30">30 min</option>
+                                <option value="15" {{ old('tolerancia_antes', '15') == '15' ? 'selected' : '' }}>15 min</option>
+                                <option value="30" {{ old('tolerancia_antes') == '30' ? 'selected' : '' }}>30 min</option>
                             </select>
                         </div>
                         <div>
                             <label class="block text-xs text-omg-kashmir mb-1">Después (min)</label>
                             <select name="tolerancia_despues"
                                 class="w-full border border-omg-kashmir rounded px-3 py-2 bg-omg-chardon focus:outline-none focus:ring-2 focus:ring-omg-coral">
-                                <option value="15">15 min</option>
-                                <option value="30">30 min</option>
+                                <option value="15" {{ old('tolerancia_despues', '15') == '15' ? 'selected' : '' }}>15 min</option>
+                                <option value="30" {{ old('tolerancia_despues') == '30' ? 'selected' : '' }}>30 min</option>
                             </select>
                         </div>
                     </div>
@@ -140,6 +144,7 @@
                         <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
                     @enderror
                 </div>
+
             </div>
 
             {{-- Visitantes --}}
@@ -156,17 +161,23 @@
                     <div class="grid grid-cols-3 gap-4">
                         <div>
                             <label class="block text-sm font-semibold text-omg-slate mb-1"><i class="fas fa-user mr-1"></i> Nombre</label>
-                            <input type="text" name="visitante_nombre[]" placeholder="Nombre"
+                            <input type="text" name="visitante_nombre[]"
+                                placeholder="Nombre"
+                                value="{{ old('visitante_nombre.0') }}"
                                 class="w-full border border-omg-kashmir rounded-lg px-3 py-2 bg-omg-chardon focus:outline-none focus:ring-2 focus:ring-omg-nile">
                         </div>
                         <div>
                             <label class="block text-sm font-semibold text-omg-slate mb-1"><i class="fas fa-user mr-1"></i> Apellidos</label>
-                            <input type="text" name="visitante_apellidos[]" placeholder="Apellidos"
+                            <input type="text" name="visitante_apellidos[]"
+                                placeholder="Apellidos"
+                                value="{{ old('visitante_apellidos.0') }}"
                                 class="w-full border border-omg-kashmir rounded-lg px-3 py-2 bg-omg-chardon focus:outline-none focus:ring-2 focus:ring-omg-nile">
                         </div>
                         <div>
                             <label class="block text-sm font-semibold text-omg-slate mb-1"><i class="fas fa-envelope mr-1"></i> Correo</label>
-                            <input type="email" name="visitante_correo[]" placeholder="correo@ejemplo.com"
+                            <input type="email" name="visitante_correo[]"
+                                placeholder="correo@ejemplo.com"
+                                value="{{ old('visitante_correo.0') }}"
                                 class="w-full border border-omg-kashmir rounded-lg px-3 py-2 bg-omg-chardon focus:outline-none focus:ring-2 focus:ring-omg-nile">
                         </div>
                     </div>
@@ -174,7 +185,7 @@
             </div>
 
             {{-- Botón agregar visitante (solo grupal) --}}
-            <div id="btn-agregar" class="hidden mb-4">
+            <div id="btn-agregar" class="{{ old('es_grupal') == '1' ? '' : 'hidden' }} mb-4">
                 <button type="button" onclick="agregarVisitante()"
                     class="w-full border-2 border-dashed border-omg-kashmir text-omg-nile px-4 py-3 rounded-xl hover:bg-omg-chardon transition font-heading font-semibold flex items-center justify-center gap-2">
                     <i class="fas fa-user-plus"></i> Agregar otro visitante
@@ -182,7 +193,7 @@
             </div>
 
             {{-- Contador --}}
-            <div id="contador" class="hidden mb-6">
+            <div id="contador" class="{{ old('es_grupal') == '1' ? '' : 'hidden' }} mb-6">
                 <p class="text-sm text-omg-kashmir flex items-center gap-1">
                     <i class="fas fa-users"></i>
                     Total de visitantes: <span id="num-visitantes" class="font-bold text-omg-nile ml-1">1</span>
@@ -191,11 +202,13 @@
 
             <div class="flex justify-end gap-4 mt-6 pt-4 border-t border-omg-chardon">
                 <a href="{{ route('solicitudes.index') }}"
-                   class="bg-omg-nile text-white px-4 py-2 rounded-lg hover:opacity-90 font-heading font-semibold flex items-center gap-2">
+                   class="text-white px-4 py-2 rounded-lg hover:opacity-90 font-heading font-semibold flex items-center gap-2"
+                   style="background-color: #3B5675;">
                     <i class="fas fa-arrow-left"></i> Cancelar
                 </a>
                 <button type="submit"
-                    class="bg-omg-coral text-white px-6 py-2 rounded-lg hover:opacity-90 font-heading font-semibold flex items-center gap-2">
+                    class="text-white px-6 py-2 rounded-lg hover:opacity-90 font-heading font-semibold flex items-center gap-2"
+                    style="background-color: #DA7E2D;">
                     Guardar <i class="fas fa-save"></i>
                 </button>
             </div>
@@ -203,35 +216,102 @@
     </div>
 
     <script>
+        const lugares = [
+            'Edificio A — Edificio Administrativo',
+            'Edificio B — Centro de Información',
+            'Edificio B-1 — Centro de Cómputo',
+            'Edificio B-2 — Ingeniería Industrial',
+            'Edificio B-3 — Posgrados e Investigación',
+            'Edificio B-4 — Ingeniería Logística y Subdirección Académica',
+            'Edificio B-5 — Laboratorio de Ingeniería Ambiental',
+            'Edificio C-1 — Unidad de Apoyo Tutorial',
+            'Edificio C-2 — Desarrollo Académico',
+            'Edificio C-3 — Lenguas Extranjeras y Sala de Titulación',
+            'Edificio D — Cubículos de Ingeniería Química',
+            'Edificio D-1 — Laboratorio de Ingeniería Electrónica',
+            'Edificio D-3 — Ingeniería Mecatrónica',
+            'Edificio F',
+            'Edificio G — Sindicato',
+            'Edificio G — Laboratorio de Análisis',
+            'Edificio H — Cafetería',
+            'Edificio I — Ciencias Básicas',
+            'Edificio J — Laboratorio de Química',
+            'Edificio K — Gestión Tecnológica y Vinculación',
+            'Edificio K — Sala Audiovisual y Laboratorio',
+            'Edificio M — Ingeniería Electromecánica',
+            'Edificio N — Laboratorio de Análisis',
+            'Edificio O — Actividades Extraescolares',
+            'Edificio P — Ingeniería Química',
+            'Edificio Q — Ingeniería Electrónica',
+            'Edificio R — Almacén General y Departamento de Mantenimiento',
+            'Edificio S — LIEM',
+            'Edificio T — Ingeniería TICs y Sistemas',
+            'Edificio U — Cubículos de Profesores',
+            'Edificio X — Servicios Escolares',
+            'Edificio Y — Ingeniería en GE',
+            'Edificio Z — Ingeniería en GE',
+        ];
+
+        function filtrarLugares(query) {
+            const filtrados = query
+                ? lugares.filter(l => l.toLowerCase().includes(query.toLowerCase()))
+                : lugares;
+            renderDropdown(filtrados);
+            document.getElementById('lugares-dropdown').classList.remove('hidden');
+            document.getElementById('lugar_encuentro').value = query;
+        }
+
+        function mostrarLugares() {
+            const query = document.getElementById('lugar-search').value;
+            const filtrados = query
+                ? lugares.filter(l => l.toLowerCase().includes(query.toLowerCase()))
+                : lugares;
+            renderDropdown(filtrados);
+            document.getElementById('lugares-dropdown').classList.remove('hidden');
+        }
+
+        function ocultarLugares() {
+            document.getElementById('lugares-dropdown').classList.add('hidden');
+        }
+
+        function renderDropdown(lista) {
+            const dropdown = document.getElementById('lugares-dropdown');
+            if (lista.length === 0) {
+                dropdown.innerHTML = '<li class="px-3 py-2 text-sm text-gray-400">No se encontraron resultados</li>';
+                return;
+            }
+            dropdown.innerHTML = lista.map(l => `
+                <li class="px-3 py-2 text-sm cursor-pointer border-b border-gray-50 last:border-0"
+                    onmouseover="this.style.backgroundColor='#FFF3EC'"
+                    onmouseout="this.style.backgroundColor='white'"
+                    onmousedown="seleccionarLugar('${l.replace(/'/g, "\\'")}')">
+                    <i class="fas fa-map-marker-alt mr-2 text-xs" style="color:#DA7E2D;"></i>${l}
+                </li>
+            `).join('');
+        }
+
+        function seleccionarLugar(lugar) {
+            document.getElementById('lugar-search').value = lugar;
+            document.getElementById('lugar_encuentro').value = lugar;
+            document.getElementById('lugares-dropdown').classList.add('hidden');
+        }
+
         document.addEventListener('DOMContentLoaded', () => {
             const input = document.getElementById('fecha_inicio');
-            if (!input) return;
+            if (!input || input.value) return;
 
             const min = new Date();
             min.setHours(min.getHours() + 1);
             min.setSeconds(0, 0);
-
             const pad = (n) => String(n).padStart(2, '0');
             input.min = `${min.getFullYear()}-${pad(min.getMonth() + 1)}-${pad(min.getDate())}T${pad(min.getHours())}:${pad(min.getMinutes())}`;
+
+            document.addEventListener('click', (e) => {
+                if (!e.target.closest('#lugar-search') && !e.target.closest('#lugares-dropdown')) {
+                    ocultarLugares();
+                }
+            });
         });
-
-        function actualizarDireccion() {
-            const select = document.getElementById('tipo_solicitud');
-            const option = select.options[select.selectedIndex];
-            const nombre = option.dataset.nombre;
-            const info   = document.getElementById('direccion-info');
-            const texto  = document.getElementById('direccion-texto');
-
-            if (!nombre) { info.classList.add('hidden'); return; }
-
-            info.classList.remove('hidden');
-
-            if (nombre === 'Proveedor' || nombre === 'Institucional / Negocios') {
-                texto.innerHTML = '<strong>Dirección:</strong> Esta solicitud será enviada al <strong>Departamento</strong> correspondiente para su autorización';
-            } else if (nombre === 'Personal') {
-                texto.innerHTML = '<strong>Dirección:</strong> Esta solicitud será enviada a tu <strong>Jefe directo</strong> para su autorización';
-            }
-        }
 
         function toggleGrupal() {
             const switchEl   = document.getElementById('switch-grupal');
@@ -244,11 +324,9 @@
             contador.classList.toggle('hidden', !esGrupalOn);
             esGrupal.value = esGrupalOn ? '1' : '0';
 
-            // Si desactiva grupal, elimina visitantes extra
             if (!esGrupalOn) {
-                const cards = document.querySelectorAll('.visitante-card');
-                cards.forEach((card, index) => {
-                    if (index > 0) card.remove();
+                document.querySelectorAll('.visitante-card').forEach((card, i) => {
+                    if (i > 0) card.remove();
                 });
                 actualizarContador();
             }

@@ -28,6 +28,10 @@
                     <span class="px-3 py-1 rounded-full text-white text-xs font-semibold
                         @if($solicitud->estado->nombre == 'Pendiente') bg-yellow-500
                         @elseif($solicitud->estado->nombre == 'Autorizada') bg-green-500
+                        @elseif($solicitud->estado->nombre == 'En Institucion') bg-blue-500
+                        @elseif($solicitud->estado->nombre == 'En Encuentro') bg-purple-500
+                        @elseif($solicitud->estado->nombre == 'En Transito a Salida') bg-orange-500
+                        @elseif($solicitud->estado->nombre == 'Finalizada') bg-green-700
                         @elseif($solicitud->estado->nombre == 'Cancelada') bg-gray-500
                         @else bg-red-500 @endif">
                         {{ $solicitud->estado->nombre }}
@@ -71,6 +75,29 @@
                 </p>
                 <p class="font-semibold text-omg-slate">{{ $solicitud->tolerancia_antes }} min antes / {{ $solicitud->tolerancia_despues }} min después</p>
             </div>
+
+            {{-- Tiempos de encuentro --}}
+            @if($solicitud->hora_llegada_encuentro)
+            <div>
+                <p class="text-sm text-omg-kashmir font-semibold flex items-center gap-1">
+                    <i class="fas fa-map-marker-alt"></i> Llegada al Encuentro
+                </p>
+                <p class="font-semibold text-omg-slate">
+                    {{ \Carbon\Carbon::parse($solicitud->hora_llegada_encuentro)->format('d/m/Y H:i') }}
+                </p>
+            </div>
+            @endif
+
+            @if($solicitud->hora_salida_encuentro)
+            <div>
+                <p class="text-sm text-omg-kashmir font-semibold flex items-center gap-1">
+                    <i class="fas fa-sign-out-alt"></i> Salida del Encuentro
+                </p>
+                <p class="font-semibold text-omg-slate">
+                    {{ \Carbon\Carbon::parse($solicitud->hora_salida_encuentro)->format('d/m/Y H:i') }}
+                </p>
+            </div>
+            @endif
         </div>
 
         <h3 class="text-lg font-heading font-semibold text-omg-nile mb-4 border-b border-omg-kashmir pb-2 flex items-center gap-2">
@@ -78,7 +105,7 @@
         </h3>
 
         <table class="w-full text-sm text-left border mb-6">
-            <thead class="bg-omg-nile text-white">
+            <thead class="text-white" style="background-color: #E26A23;">
                 <tr>
                     <th class="px-4 py-2"><i class="fas fa-user mr-1"></i> Nombre</th>
                     <th class="px-4 py-2"><i class="fas fa-user mr-1"></i> Apellidos</th>
@@ -87,7 +114,9 @@
             </thead>
             <tbody>
                 @foreach($solicitud->visitantes as $v)
-                <tr class="hover:bg-omg-chardon border-b">
+                <tr class="border-b"
+                    onmouseover="this.style.backgroundColor='#FFF3EC'"
+                    onmouseout="this.style.backgroundColor='transparent'">
                     <td class="px-4 py-2">{{ $v->nombre }}</td>
                     <td class="px-4 py-2">{{ $v->apellidos }}</td>
                     <td class="px-4 py-2">{{ $v->correo_personal }}</td>
@@ -96,12 +125,16 @@
             </tbody>
         </table>
 
-        <div class="flex justify-end gap-4">
+        <div class="flex justify-end gap-4 flex-wrap">
+
+            {{-- Regresar --}}
             <a href="{{ route('solicitudes.index') }}"
-               class="bg-omg-nile text-white px-4 py-2 rounded hover:opacity-90 font-heading font-semibold flex items-center gap-2">
+               class="text-white px-4 py-2 rounded hover:opacity-90 font-heading font-semibold flex items-center gap-2"
+               style="background-color: #3B5675;">
                 <i class="fas fa-arrow-left"></i> Regresar
             </a>
 
+            {{-- Cancelar solicitud --}}
             @if($solicitud->estado->nombre == 'Pendiente')
                 <form action="{{ route('solicitudes.cancelar', $solicitud->id_solicitud) }}" method="POST"
                     onsubmit="return confirm('¿Desea cancelar esta solicitud?')">
@@ -113,16 +146,49 @@
                 </form>
             @endif
 
+            {{-- Enviar QR --}}
             @if($solicitud->estado->nombre == 'Autorizada')
                 <form action="{{ route('solicitudes.enviarQR', $solicitud->id_solicitud) }}" method="POST"
                     onsubmit="return confirm('¿Desea enviar el pase QR al visitante?')">
                     @csrf
                     <button type="submit"
-                        class="bg-omg-coral text-white px-4 py-2 rounded hover:opacity-90 font-heading font-semibold flex items-center gap-2">
+                        class="text-white px-4 py-2 rounded hover:opacity-90 font-heading font-semibold flex items-center gap-2"
+                        style="background-color: #DA7E2D;">
                         <i class="fas fa-paper-plane"></i> Enviar QR al Visitante
                     </button>
                 </form>
             @endif
+
+            {{-- Botón dinámico encuentro --}}
+            @if($solicitud->id_estado_solicitud === 5)
+                <form action="{{ route('solicitudes.llegadaEncuentro', $solicitud->id_solicitud) }}" method="POST">
+                    @csrf
+                    <button type="submit"
+                        class="text-white px-4 py-2 rounded-lg hover:opacity-90 font-heading font-semibold flex items-center gap-2"
+                        style="background-color: #DA7E2D;">
+                        <i class="fas fa-map-marker-alt"></i> Registrar Llegada a Encuentro
+                    </button>
+                </form>
+            @elseif($solicitud->id_estado_solicitud === 6)
+                <form action="{{ route('solicitudes.salidaEncuentro', $solicitud->id_solicitud) }}" method="POST">
+                    @csrf
+                    <button type="submit"
+                        class="text-white px-4 py-2 rounded-lg hover:opacity-90 font-heading font-semibold flex items-center gap-2"
+                        style="background-color: #E26A23;">
+                        <i class="fas fa-sign-out-alt"></i> Registrar Salida de Encuentro
+                    </button>
+                </form>
+            @elseif($solicitud->id_estado_solicitud === 7)
+                <span class="text-xs font-semibold px-3 py-2 rounded-lg border flex items-center gap-1"
+                    style="color: #A9AAAD; border-color: #A9AAAD;">
+                    <i class="fas fa-walking"></i> En Tránsito a la Salida
+                </span>
+            @elseif($solicitud->id_estado_solicitud === 8)
+                <span class="text-xs font-semibold px-3 py-2 rounded-lg border border-green-400 text-green-600 flex items-center gap-1">
+                    <i class="fas fa-check-circle"></i> Visita Finalizada
+                </span>
+            @endif
+
         </div>
     </div>
 </x-app-layout>

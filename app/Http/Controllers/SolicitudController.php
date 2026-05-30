@@ -22,8 +22,8 @@ class SolicitudController extends Controller
     public function index()
     {
         $solicitudes = Solicitud::where('id_solicitante', $this->idEmpleado())
-            ->with(['estado', 'tipo'])
-            ->orderBy('fecha_creacion', 'desc')
+            ->with(['estado', 'tipo', 'visitantes'])
+            ->orderBy('fecha_inicio', 'asc')
             ->paginate(10);
 
         return view('solicitudes.index', compact('solicitudes'));
@@ -156,21 +156,98 @@ class SolicitudController extends Controller
 
     public function destroy($id)
     {
-        $solicitud = Solicitud::findOrFail($id);
+        $solicitud = Solicitud::with('solicitudVisitantes.qr')->findOrFail($id);
 
         $fechaPasada = now() > \Carbon\Carbon::parse($solicitud->fecha_inicio);
 
-        if (!in_array($solicitud->id_estado_solicitud, [3, 4]) && !$fechaPasada) {
+        if (!in_array($solicitud->id_estado_solicitud, [3, 4, 8]) && !$fechaPasada) {
             return redirect()->route('solicitudes.index')
-                ->with('error', 'Solo se pueden eliminar solicitudes canceladas, rechazadas o con fecha pasada.');
+                ->with('error', 'Solo se pueden eliminar solicitudes canceladas, rechazadas, finalizadas o con fecha pasada.');
         }
 
-        $solicitud->visitantes()->detach();
+        foreach ($solicitud->solicitudVisitantes as $sv) {
+            if ($sv->qr) {
+                // 1. Eliminar registros de acceso primero
+                \App\Models\RegistroAcceso::where('id_qr', $sv->qr->id_qr)->delete();
+                // 2. Eliminar QR
+                $sv->qr->delete();
+            }
+        }
+
+        // 3. Eliminar solicitud_visitante
+        $solicitud->solicitudVisitantes()->delete();
+
+        // 4. Eliminar notificaciones
+        \App\Models\Notificacion::where('id_solicitud', $id)->delete();
+
+        // 5. Eliminar solicitud
         $solicitud->delete();
 
         return redirect()->route('solicitudes.index')
             ->with('success', 'Solicitud eliminada correctamente.');
     }
+
+    public function registrarLlegadaEncuentro($id)
+    {
+        $solicitud = Solicitud::findOrFail($id);
+
+        if ($solicitud->id_estado_solicitud !== 5) {
+            return redirect()->route('solicitudes.show', $id)
+                ->with('error', 'La visita debe estar En Institución para registrar llegada al encuentro.');
+        }
+
+        $solicitud->update([
+            'id_estado_solicitud' => 6,
+            'hora_llegada_encuentro' => now(),
+        ]);
+
+        // Notificar al solicitante
+        \App\Models\Notificacion::create([
+            'id_empleado'  => $this->idEmpleado(),
+            'id_solicitud' => $solicitud->id_solicitud,
+            'tipo'         => 'encuentro',
+            'mensaje'      => "El visitante llegó al lugar de encuentro. Folio: {$solicitud->folio}",
+            'leida'        => false,
+        ]);
+
+        return redirect()->route('solicitudes.show', $id)
+            ->with('success', 'Llegada al encuentro registrada correctamente.');
+    }
+
+    public function registrarSalidaEncuentro($id)
+    {
+        $solicitud = Solicitud::findOrFail($id);
+
+        if ($solicitud->id_estado_solicitud !== 6) {
+            return redirect()->route('solicitudes.show', $id)
+                ->with('error', 'La visita debe estar En Encuentro para registrar salida.');
+        }
+
+        $solicitud->update([
+            'id_estado_solicitud' => 7,
+            'hora_salida_encuentro' => now(),
+        ]);
+
+        return redirect()->route('solicitudes.show', $id)
+            ->with('success', 'Salida del encuentro registrada correctamente.');
+    }
+
+
+
+
+    public function historial()
+    {
+        $solicitudes = Solicitud::where('id_solicitante', $this->idEmpleado())
+            ->where('id_estado_solicitud', 8) // Finalizada
+            ->with(['visitantes', 'solicitudVisitantes.qr.registroAcceso'])
+            ->orderBy('fecha_inicio', 'desc')
+            ->paginate(10);
+
+        return view('solicitudes.historial', compact('solicitudes'));
+    }
+
+
+
 
     public function edit($id) { return redirect()->route('solicitudes.show', $id); }
     public function update(\Illuminate\Http\Request $r, $id) { return redirect()->route('solicitudes.show', $id); }

@@ -3,10 +3,9 @@
 // Proyecto  : Sistema de Gestión de Accesos y Visitas
 // Archivo   : routes/api.php
 // Autor     : Omega Company
-// Fecha     : 2026-05-28
-// Versión   : 2.1.0
-// Cambio    : Se agrega ruta pública para visita de consulta del vigilante.
-//             Rutas del vigilante son PÚBLICAS — no necesita Sanctum porque
+// Fecha     : 2026-05-27
+// Versión   : 2.0.0
+// Cambio    : Rutas del vigilante son PÚBLICAS — no necesita Sanctum porque
 //             no existe como usuario en BD. Solicitante y autorizador
 //             sin ningún cambio.
 // =============================================================================
@@ -21,12 +20,12 @@ Route::post('/login', [AuthController::class, 'login']);
 
 // Vigilante: todas públicas, no existe en BD
 Route::post('/vigilante/login',      [VigilanteApiController::class, 'login']);
-Route::post('/vigilante/consulta',   [VigilanteApiController::class, 'registrarConsulta']);
 Route::get('/vigilante/visitas-hoy', [VigilanteApiController::class, 'visitasHoy']);
 Route::post('/vigilante/escanear',   [VigilanteApiController::class, 'escanear']);
 Route::post('/vigilante/entrada',    [VigilanteApiController::class, 'registrarEntrada']);
 Route::post('/vigilante/salida',     [VigilanteApiController::class, 'registrarSalida']);
 Route::get('/vigilante/historial',   [VigilanteApiController::class, 'historial']);
+
 
 // ── Protegidas con Sanctum (solicitante y autorizador) — SIN CAMBIOS ──────────
 Route::middleware('auth:sanctum')->group(function () {
@@ -38,11 +37,10 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/solicitudes/{id}',           [SolicitudApiController::class, 'show']);
     Route::post('/solicitudes/{id}/cancelar', [SolicitudApiController::class, 'cancelar']);
     Route::get('/solicitudes/{id}/qr',        [SolicitudApiController::class, 'qr']);
-    Route::post('/solicitudes/{id}/enviar-qr', [SolicitudApiController::class, 'enviarQR']);
 
-    Route::get('/autorizador/solicitudes',     [SolicitudApiController::class, 'pendientes']);
-    Route::post('/autorizador/{id}/autorizar', [SolicitudApiController::class, 'autorizar']);
-    Route::post('/autorizador/{id}/rechazar',  [SolicitudApiController::class, 'rechazar']);
+    Route::get('/autorizador/solicitudes',       [SolicitudApiController::class, 'pendientes']);
+    Route::post('/autorizador/{id}/autorizar',   [SolicitudApiController::class, 'autorizar']);
+    Route::post('/autorizador/{id}/rechazar',    [SolicitudApiController::class, 'rechazar']);
 
     Route::get('/notificaciones', [AuthController::class, 'notificaciones']);
 });

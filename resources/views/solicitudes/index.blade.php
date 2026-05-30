@@ -46,32 +46,69 @@
                 </thead>
                 <tbody>
                     @forelse($solicitudes as $s)
+                    @php $fechaPasada = now() > \Carbon\Carbon::parse($s->fecha_inicio); @endphp
                     <tr class="border-b" style="transition: background 0.2s;"
                         onmouseover="this.style.backgroundColor='#FFF3EC'"
                         onmouseout="this.style.backgroundColor='transparent'">
-                        <td class="px-4 py-2">{{ $s->id_solicitud }}</td>
-                        <td class="px-4 py-2">{{ $s->fecha_inicio }}</td>
+                        <td class="px-4 py-2 font-mono text-xs" style="color: #DA7E2D;">
+                            {{ $s->folio ?? $s->id_solicitud }}
+                        </td>
+                        <td class="px-4 py-2">
+                            {{ \Carbon\Carbon::parse($s->fecha_inicio)->format('d/m/Y H:i') }}
+                            @if($fechaPasada && !in_array($s->estado->nombre, ['Finalizada','Cancelada','Rechazada']))
+                                <span class="block text-xs text-gray-400">
+                                    <i class="fas fa-clock mr-1"></i> Expirada
+                                </span>
+                            @endif
+                        </td>
                         <td class="px-4 py-2">{{ $s->lugar_encuentro }}</td>
                         <td class="px-4 py-2">{{ $s->motivo_visita }}</td>
                         <td class="px-4 py-2">
                             <span class="px-2 py-1 rounded-full text-white text-xs font-semibold
                                 @if($s->estado->nombre == 'Pendiente') bg-yellow-500
                                 @elseif($s->estado->nombre == 'Autorizada') bg-green-500
+                                @elseif($s->estado->nombre == 'En Institucion') bg-blue-500
+                                @elseif($s->estado->nombre == 'En Encuentro') bg-purple-500
+                                @elseif($s->estado->nombre == 'En Transito a Salida') bg-orange-500
+                                @elseif($s->estado->nombre == 'Finalizada') bg-green-700
                                 @elseif($s->estado->nombre == 'Cancelada') bg-gray-500
                                 @else bg-red-500 @endif">
                                 {{ $s->estado->nombre }}
                             </span>
                         </td>
                         <td class="px-4 py-2">
-                            <div class="flex gap-2">
+                            <div class="flex gap-2 flex-wrap">
                                 <a href="{{ route('solicitudes.show', $s->id_solicitud) }}"
                                    class="text-white px-3 py-1 rounded hover:opacity-90 text-xs flex items-center gap-1"
                                    style="background-color: #DA7E2D;">
                                     <i class="fas fa-eye"></i> Ver
                                 </a>
-                                @if(in_array($s->estado->nombre, ['Cancelada', 'Rechazada']))
+
+                                {{-- Botón dinámico encuentro --}}
+                                @if($s->id_estado_solicitud === 5)
+                                    <form action="{{ route('solicitudes.llegadaEncuentro', $s->id_solicitud) }}" method="POST">
+                                        @csrf
+                                        <button type="submit"
+                                            class="text-white px-3 py-1 rounded hover:opacity-90 text-xs flex items-center gap-1"
+                                            style="background-color: #3B5675;">
+                                            <i class="fas fa-map-marker-alt"></i> Llegada Encuentro
+                                        </button>
+                                    </form>
+                                @elseif($s->id_estado_solicitud === 6)
+                                    <form action="{{ route('solicitudes.salidaEncuentro', $s->id_solicitud) }}" method="POST">
+                                        @csrf
+                                        <button type="submit"
+                                            class="text-white px-3 py-1 rounded hover:opacity-90 text-xs flex items-center gap-1"
+                                            style="background-color: #E26A23;">
+                                            <i class="fas fa-sign-out-alt"></i> Salida Encuentro
+                                        </button>
+                                    </form>
+                                @endif
+
+                                {{-- Eliminar: cancelada, rechazada, finalizada o fecha pasada --}}
+                                @if(in_array($s->estado->nombre, ['Cancelada', 'Rechazada', 'Finalizada']) || $fechaPasada)
                                     <form action="{{ route('solicitudes.destroy', $s->id_solicitud) }}" method="POST"
-                                        onsubmit="return confirm('¿Estás seguro de eliminar esta solicitud?')">
+                                        onsubmit="return confirm('¿Eliminar esta solicitud?')">
                                         @csrf
                                         @method('DELETE')
                                         <button type="submit"
@@ -100,6 +137,15 @@
             {{-- Paginación --}}
             <div class="mt-4">
                 {{ $solicitudes->links() }}
+            </div>
+
+             {{-- Link a historial --}}
+            <div class="mt-4 text-right">
+                <a href="{{ route('solicitudes.historial') }}"
+                    class="text-sm flex items-center gap-1 justify-end"
+                    style="color: #DA7E2D;">
+                    <i class="fas fa-history"></i> Ver historial de visitas finalizadas
+                </a>
             </div>
 
         </div>

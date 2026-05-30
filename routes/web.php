@@ -29,6 +29,11 @@ Route::middleware(['auth', 'role:solicitante'])->group(function () {
             ->first();
         return view('solicitudes.qr', compact('qr'));
     })->name('solicitudes.qr');
+
+    Route::post('/solicitudes/{id}/llegada-encuentro', [SolicitudController::class, 'registrarLlegadaEncuentro'])->name('solicitudes.llegadaEncuentro');
+    Route::post('/solicitudes/{id}/salida-encuentro', [SolicitudController::class, 'registrarSalidaEncuentro'])->name('solicitudes.salidaEncuentro');
+    Route::get('/solicitudes/historial', [SolicitudController::class, 'historial'])->name('solicitudes.historial');
+
 });
 
 // Rutas Autorizador
