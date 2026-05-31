@@ -72,12 +72,11 @@ class VigilanteController extends Controller
 
         $qr = QR::findOrFail($request->id_qr);
 
-        RegistroAcceso::create([
-            'hora_llegada_institucion' => now(),
-            'id_qr'                    => $qr->id_qr,
-            'telefono_vigilante'       => session('vigilante_telefono'),
-            'area_vigilante'           => session('vigilante_area'),
-        ]);
+        RegistroAcceso::registrarEntradaInstitucional(
+            $qr->id_qr,
+            (string) session('vigilante_telefono'),
+            (string) session('vigilante_area')
+        );
 
         $qr->update(['id_estadoQr' => 3]);
 
@@ -99,11 +98,11 @@ class VigilanteController extends Controller
                 ->with('error', 'No se encontró entrada registrada para este QR.');
         }
 
-        $registro->update([
-            'hora_salida_institucion' => now(),
-            'telefono_vigilante'      => session('vigilante_telefono'),
-            'area_vigilante'          => session('vigilante_area'),
-        ]);
+        RegistroAcceso::registrarSalidaInstitucional(
+            $registro,
+            (string) session('vigilante_telefono'),
+            (string) session('vigilante_area')
+        );
 
         return redirect()->route('vigilante.index')
             ->with('success', 'Salida registrada correctamente.');

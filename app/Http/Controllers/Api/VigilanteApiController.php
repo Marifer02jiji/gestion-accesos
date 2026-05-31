@@ -3,8 +3,8 @@
 // =============================================================================
 // Proyecto  : Sistema de Gestión de Accesos y Visitas
 // Archivo   : VigilanteApiController.php
-// Versión   : 3.2.0
-// Descripción: Fix salida — validar vigencia solo si no tiene entrada activa
+// Versión   : 3.3.0
+// Descripción: Registro de acceso — columnas telefono_vigilante_entrada / caseta_entrada
 // =============================================================================
 
 namespace App\Http\Controllers\Api;
@@ -201,16 +201,22 @@ class VigilanteApiController extends Controller
     {
         $validador = Validator::make($request->all(), [
             'codigo_qr' => ['required', 'string'],
-            'telefono'  => ['required', 'string', 'digits:10'],
-            'area'      => ['nullable', 'string', 'max:100'],
+            'telefono'  => ['required', 'digits:10'],
+            'area'      => ['required', 'string', 'min:1', 'max:100'],
         ]);
 
         if ($validador->fails()) {
             return response()->json(['message' => 'Datos invalidos.', 'errors' => $validador->errors()], 422);
         }
 
-        $telefono = $request->input('telefono');
-        $area     = $request->input('area', '');
+        try {
+            $telefonoEntrada = $this->resolverTelefonoVigilanteEntrada($request);
+            $casetaEntrada   = $this->resolverCasetaEntrada($request);
+            $telefonoSalida  = $this->resolverTelefonoVigilanteSalida($request);
+            $casetaSalida    = $this->resolverCasetaSalida($request);
+        } catch (\InvalidArgumentException $e) {
+            return response()->json(['message' => $e->getMessage()], 422);
+        }
 
         $qr = QR::where('codigo_numerico', $request->codigo_qr)
             ->with(['solicitudVisitante.visitante', 'solicitudVisitante.solicitud'])
@@ -246,12 +252,11 @@ class VigilanteApiController extends Controller
 
         try {
             if ($accionDisponible === 'entrada') {
-                RegistroAcceso::create([
-                    'id_qr'                    => $qr->id_qr,
-                    'hora_llegada_institucion' => now(),
-                    'telefono_vigilante'       => $telefono,
-                    'area_vigilante'           => $area,
-                ]);
+                RegistroAcceso::registrarEntradaInstitucional(
+                    $qr->id_qr,
+                    $telefonoEntrada,
+                    $casetaEntrada
+                );
                 $qr->update(['id_estadoQr' => 2]);
 
                 // Cambiar estado solicitud a "En Institución" (id=5)
@@ -267,11 +272,11 @@ class VigilanteApiController extends Controller
                 ]);
 
             } else {
-                $registroActivo->update([
-                    'hora_salida_institucion' => now(),
-                    'telefono_vigilante'      => $telefono,
-                    'area_vigilante'          => $area,
-                ]);
+                RegistroAcceso::registrarSalidaInstitucional(
+                    $registroActivo,
+                    $telefonoSalida,
+                    $casetaSalida
+                );
                 $qr->update(['id_estadoQr' => 3]);
 
                 // Cambiar estado solicitud a "Finalizada" (id=8)
@@ -287,6 +292,11 @@ class VigilanteApiController extends Controller
                 ]);
             }
         } catch (\Throwable $e) {
+            Log::error('Error al registrar acceso en escanear', [
+                'id_qr'   => $qr->id_qr,
+                'accion'  => $accionDisponible,
+                'message' => $e->getMessage(),
+            ]);
             return response()->json([
                 'data' => $this->respuestaRechazo($qr, 'Error interno al registrar el acceso.')
             ], 200);
@@ -321,39 +331,65 @@ class VigilanteApiController extends Controller
     {
         $request->validate([
             'id_qr'    => 'required|integer',
-            'telefono' => 'required|string|digits:10',
-            'area'     => 'required|string|max:100',
+            'telefono' => 'required|digits:10',
+            'area'     => 'required|string|min:1|max:100',
         ]);
 
-        $qr = QR::findOrFail($request->id_qr);
+        try {
+            $telefono = $this->resolverTelefonoVigilanteEntrada($request);
+            $caseta   = $this->resolverCasetaEntrada($request);
 
-        $entradaActiva = RegistroAcceso::where('id_qr', $qr->id_qr)
-            ->whereNotNull('hora_llegada_institucion')
-            ->whereNull('hora_salida_institucion')
-            ->exists();
+            Log::info('POST /vigilante/entrada — datos vigilante', [
+                'id_qr'                      => $request->id_qr,
+                'telefono_body'              => $request->input('telefono'),
+                'telefono_vigilante_entrada' => $telefono,
+                'caseta_entrada'             => $caseta,
+            ]);
 
-        if ($entradaActiva) {
-            return response()->json(['message' => 'Este visitante ya tiene una entrada activa sin salida.'], 422);
+            $qr = QR::findOrFail($request->id_qr);
+
+            $entradaActiva = RegistroAcceso::where('id_qr', $qr->id_qr)
+                ->whereNotNull('hora_llegada_institucion')
+                ->whereNull('hora_salida_institucion')
+                ->exists();
+
+            if ($entradaActiva) {
+                return response()->json([
+                    'message' => 'Este visitante ya tiene una entrada activa sin salida.',
+                ], 422);
+            }
+
+            RegistroAcceso::registrarEntradaInstitucional(
+                $qr->id_qr,
+                $telefono,
+                $caseta
+            );
+
+            $qr->update(['id_estadoQr' => 2]);
+
+            return response()->json(['message' => 'Entrada registrada correctamente.']);
+        } catch (\InvalidArgumentException $e) {
+            return response()->json(['message' => $e->getMessage()], 422);
+        } catch (\Throwable $e) {
+            Log::error('Error en POST /vigilante/entrada', [
+                'id_qr'    => $request->id_qr,
+                'telefono' => $request->input('telefono'),
+                'area'     => $request->input('area'),
+                'message'  => $e->getMessage(),
+            ]);
+
+            return response()->json([
+                'message' => 'No fue posible registrar la entrada. Intente nuevamente.',
+            ], 500);
         }
-
-        RegistroAcceso::create([
-            'hora_llegada_institucion' => now(),
-            'id_qr'                    => $qr->id_qr,
-            'telefono_vigilante'       => $request->telefono,
-            'area_vigilante'           => $request->area,
-        ]);
-
-        $qr->update(['id_estadoQr' => 2]);
-
-        return response()->json(['message' => 'Entrada registrada correctamente.']);
     }
 
     public function registrarSalida(Request $request): JsonResponse
     {
         $request->validate([
             'id_qr'    => 'required|integer',
-            'telefono' => 'required|string|digits:10',
-            'area'     => 'required|string|max:100',
+            'telefono' => 'required|digits:10',
+            'area'     => 'required|string|min:1|max:100',
         ]);
 
         $registro = RegistroAcceso::where('id_qr', $request->id_qr)
@@ -365,11 +401,15 @@ class VigilanteApiController extends Controller
             return response()->json(['message' => 'No se encontro entrada registrada para este QR.'], 404);
         }
 
-        $registro->update([
-            'hora_salida_institucion' => now(),
-            'telefono_vigilante'      => $request->telefono,
-            'area_vigilante'          => $request->area,
-        ]);
+        try {
+            RegistroAcceso::registrarSalidaInstitucional(
+                $registro,
+                $this->resolverTelefonoVigilanteSalida($request),
+                $this->resolverCasetaSalida($request)
+            );
+        } catch (\InvalidArgumentException $e) {
+            return response()->json(['message' => $e->getMessage()], 422);
+        }
 
         QR::where('id_qr', $request->id_qr)->update(['id_estadoQr' => 3]);
 
@@ -389,7 +429,7 @@ class VigilanteApiController extends Controller
                 'visitante'                => $visitante ? $visitante->nombre . ' ' . $visitante->apellidos : 'Desconocido',
                 'hora_llegada_institucion' => $r->hora_llegada_institucion,
                 'hora_salida_institucion'  => $r->hora_salida_institucion,
-                'area_vigilante'           => $r->area_vigilante,
+                'caseta_entrada'           => $r->caseta_entrada,
             ];
         });
 
@@ -398,6 +438,86 @@ class VigilanteApiController extends Controller
             'current_page' => $registros->currentPage(),
             'last_page'    => $registros->lastPage(),
         ]);
+    }
+
+    /**
+     * Mapea el JSON { "telefono": "..." } al campo telefono_vigilante_entrada (NOT NULL).
+     */
+    private function resolverTelefonoVigilanteEntrada(Request $request): string
+    {
+        if ($request->filled('telefono_vigilante_entrada')) {
+            return $this->normalizarTelefonoVigilante(
+                (string) $request->input('telefono_vigilante_entrada')
+            );
+        }
+
+        if ($request->filled('telefono')) {
+            return $this->normalizarTelefonoVigilante((string) $request->input('telefono'));
+        }
+
+        throw new \InvalidArgumentException(
+            'El telefono del vigilante es obligatorio (campo telefono en el body).'
+        );
+    }
+
+    private function resolverCasetaEntrada(Request $request): string
+    {
+        if ($request->filled('caseta_entrada')) {
+            return trim((string) $request->input('caseta_entrada'));
+        }
+
+        if ($request->filled('area')) {
+            return trim((string) $request->input('area'));
+        }
+
+        throw new \InvalidArgumentException(
+            'El area o caseta del vigilante es obligatoria (campo area en el body).'
+        );
+    }
+
+    private function resolverTelefonoVigilanteSalida(Request $request): string
+    {
+        if ($request->filled('telefono_vigilante_salida')) {
+            return $this->normalizarTelefonoVigilante(
+                (string) $request->input('telefono_vigilante_salida')
+            );
+        }
+
+        if ($request->filled('telefono')) {
+            return $this->normalizarTelefonoVigilante((string) $request->input('telefono'));
+        }
+
+        throw new \InvalidArgumentException(
+            'El telefono del vigilante es obligatorio (campo telefono en el body).'
+        );
+    }
+
+    private function resolverCasetaSalida(Request $request): string
+    {
+        if ($request->filled('caseta_salida')) {
+            return trim((string) $request->input('caseta_salida'));
+        }
+
+        if ($request->filled('area')) {
+            return trim((string) $request->input('area'));
+        }
+
+        throw new \InvalidArgumentException(
+            'El area o caseta del vigilante es obligatoria (campo area en el body).'
+        );
+    }
+
+    private function normalizarTelefonoVigilante(string $valor): string
+    {
+        $digitos = preg_replace('/\D+/', '', $valor) ?? '';
+
+        if (strlen($digitos) !== 10) {
+            throw new \InvalidArgumentException(
+                'El telefono del vigilante debe tener exactamente 10 digitos.'
+            );
+        }
+
+        return $digitos;
     }
 
     private function respuestaRechazo(?QR $qr, string $motivo): array
