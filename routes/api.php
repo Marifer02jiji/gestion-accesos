@@ -36,7 +36,10 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/solicitudes',               [SolicitudApiController::class, 'store']);
     Route::get('/solicitudes/{id}',           [SolicitudApiController::class, 'show']);
     Route::post('/solicitudes/{id}/cancelar', [SolicitudApiController::class, 'cancelar']);
-    Route::get('/solicitudes/{id}/qr',        [SolicitudApiController::class, 'qr']);
+    Route::get('/solicitudes/{id}/qr',            [SolicitudApiController::class, 'qr']);
+    Route::post('/solicitudes/{id}/enviar-qr',    [SolicitudApiController::class, 'enviarQR']);
+    Route::post('/solicitudes/{id}/reenviar-qr',  [SolicitudApiController::class, 'reenviarQR']);
+    Route::post('/solicitudes/{id}/extender-qr',  [SolicitudApiController::class, 'extenderQR']);
 
     Route::get('/autorizador/solicitudes',       [SolicitudApiController::class, 'pendientes']);
     Route::post('/autorizador/{id}/autorizar',   [SolicitudApiController::class, 'autorizar']);

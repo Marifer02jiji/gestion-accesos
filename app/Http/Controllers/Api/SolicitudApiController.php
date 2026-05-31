@@ -60,6 +60,14 @@ class SolicitudApiController extends Controller
         return now()->greaterThan($this->fechaVencimientoSolicitud($solicitud));
     }
 
+    /** Día del encuentro ya pasó (solo fecha calendario, sin tolerancia). */
+    private function diaEncuentroPasado(Solicitud $solicitud): bool
+    {
+        return Carbon::parse($solicitud->fecha_inicio)
+            ->startOfDay()
+            ->lt(now()->startOfDay());
+    }
+
     private function cancelarPendientesVencidas(): void
     {
         Solicitud::where('id_estado_solicitud', 1)
@@ -222,8 +230,8 @@ class SolicitudApiController extends Controller
             return response()->json(['message' => 'La solicitud debe estar autorizada para enviar el QR.', 'data' => null], 422);
         }
 
-        if ($this->solicitudYaVencio($solicitud)) {
-            return response()->json(['message' => 'No se puede enviar el QR, la vigencia de la visita ya paso.', 'data' => null], 422);
+        if ($this->diaEncuentroPasado($solicitud)) {
+            return response()->json(['message' => 'No se puede enviar el QR, la fecha del encuentro ya paso.', 'data' => null], 422);
         }
 
         $enviados = 0;
@@ -243,7 +251,7 @@ class SolicitudApiController extends Controller
         }
 
         if ($enviados === 0) {
-            return response()->json(['message' => 'No se pudo enviar el QR.', 'data' => ['enviados' => 0, 'errores' => $errores]], 500);
+            return response()->json(['message' => 'No se pudo enviar el QR. Verifique que exista QR y correo del visitante.', 'data' => ['enviados' => 0, 'errores' => $errores]], 500);
         }
 
         return response()->json(['message' => "QR enviado correctamente a {$enviados} visitante(s).", 'data' => ['enviados' => $enviados, 'errores' => $errores]]);
@@ -253,12 +261,16 @@ class SolicitudApiController extends Controller
     {
         $solicitud = Solicitud::with(['solicitudVisitantes.qr', 'solicitudVisitantes.visitante'])->findOrFail($id);
 
+        if ($solicitud->id_estado_solicitud !== 2) {
+            return response()->json(['message' => 'La solicitud debe estar autorizada para reenviar el QR.', 'data' => null], 422);
+        }
+
         if (($solicitud->reenvios_qr ?? 0) >= 3) {
             return response()->json(['message' => 'Se alcanzo el limite de 3 reenvios.', 'data' => ['reenvios_restantes' => 0]], 422);
         }
 
-        if ($this->solicitudYaVencio($solicitud)) {
-            return response()->json(['message' => 'No se puede reenviar el QR, la vigencia ya paso.', 'data' => null], 422);
+        if ($this->diaEncuentroPasado($solicitud)) {
+            return response()->json(['message' => 'No se puede reenviar el QR, la fecha del encuentro ya paso.', 'data' => null], 422);
         }
 
         $enviados = 0;
