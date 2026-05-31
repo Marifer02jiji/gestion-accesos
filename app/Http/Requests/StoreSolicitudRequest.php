@@ -16,24 +16,21 @@ class StoreSolicitudRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'fecha_inicio'          => ['required', 'date', new AnticipacionMinimaVisita(1), function($attribute, $value, $fail) {
+           'fecha_inicio' => ['required', 'date', new AnticipacionMinimaVisita(1), function($attribute, $value, $fail) {
                 $fecha = Carbon::parse($value);
                 $hora  = (int) $fecha->format('H');
-                $dia   = (int) $fecha->dayOfWeek; // 0=domingo, 6=sabado
+                // $dia   = (int) $fecha->dayOfWeek;
 
-                // No permitir domingos
-                if ($dia === 0) {
-                    $fail('No se pueden agendar visitas los domingos.');
-                    return;
-                }
+                // if ($dia === 0) {
+                //     $fail('No se pueden agendar visitas los domingos.');
+                //     return;
+                // }
 
-                // Sabados hasta las 14:00
-                if ($dia === 6 && $hora >= 14) {
-                    $fail('Los sabados solo se permiten visitas hasta las 2:00 PM.');
-                    return;
-                }
+                // if ($dia === 6 && $hora >= 14) {
+                //     $fail('Los sabados solo se permiten visitas hasta las 2:00 PM.');
+                //     return;
+                // }
 
-                // Horario permitido: 6am a 9pm
                 if ($hora < 6 || $hora >= 21) {
                     $fail('Las visitas solo pueden agendarse entre las 6:00 AM y las 9:00 PM.');
                     return;

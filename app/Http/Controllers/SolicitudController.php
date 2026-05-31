@@ -4,9 +4,11 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\StoreSolicitudRequest;
 use App\Models\CaTipoSolicitud;
+use App\Models\Notificacion;
 use App\Models\QR;
 use App\Models\Solicitud;
 use App\Models\SolicitudVisitante;
+use App\Models\User;
 use App\Models\Visitante;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
@@ -17,6 +19,23 @@ class SolicitudController extends Controller
     private function idEmpleado(): int
     {
         return Auth::user()->idSam();
+    }
+
+    private function notificarAutorizadores(Solicitud $solicitud): void
+    {
+        $autorizadores = User::whereHas('roles', function($q) {
+            $q->where('name', 'autorizador');
+        })->get();
+
+        foreach ($autorizadores as $autorizador) {
+            Notificacion::create([
+                'id_empleado'  => $autorizador->idSam(),
+                'id_solicitud' => $solicitud->id_solicitud,
+                'tipo'         => 'pendiente',
+                'mensaje'      => "Nueva solicitud pendiente de autorizar. Folio: {$solicitud->folio}",
+                'leida'        => false,
+            ]);
+        }
     }
 
     public function index()
@@ -65,6 +84,9 @@ class SolicitudController extends Controller
             ]);
         }
 
+        // Notificar a todos los autorizadores
+        $this->notificarAutorizadores($solicitud);
+
         return redirect()->route('solicitudes.index')
             ->with('success', "Solicitud creada correctamente. Folio: {$solicitud->folio}");
     }
@@ -107,13 +129,11 @@ class SolicitudController extends Controller
         $solicitud = Solicitud::with(['solicitudVisitantes.qr', 'solicitudVisitantes.visitante'])
             ->findOrFail($id);
 
-        // Solo solicitudes autorizadas
         if ($solicitud->id_estado_solicitud !== 2) {
             return redirect()->route('solicitudes.show', $id)
                 ->with('error', 'Solo se puede enviar el QR cuando la solicitud esta autorizada.');
         }
 
-        // Validar que la visita no haya expirado (fecha + tolerancia_despues)
         $fechaExpiracion = \Carbon\Carbon::parse($solicitud->fecha_inicio)
             ->addMinutes($solicitud->tolerancia_despues ?? 15);
 
@@ -167,20 +187,13 @@ class SolicitudController extends Controller
 
         foreach ($solicitud->solicitudVisitantes as $sv) {
             if ($sv->qr) {
-                // 1. Eliminar registros de acceso primero
                 \App\Models\RegistroAcceso::where('id_qr', $sv->qr->id_qr)->delete();
-                // 2. Eliminar QR
                 $sv->qr->delete();
             }
         }
 
-        // 3. Eliminar solicitud_visitante
         $solicitud->solicitudVisitantes()->delete();
-
-        // 4. Eliminar notificaciones
-        \App\Models\Notificacion::where('id_solicitud', $id)->delete();
-
-        // 5. Eliminar solicitud
+        Notificacion::where('id_solicitud', $id)->delete();
         $solicitud->delete();
 
         return redirect()->route('solicitudes.index')
@@ -197,12 +210,11 @@ class SolicitudController extends Controller
         }
 
         $solicitud->update([
-            'id_estado_solicitud' => 6,
+            'id_estado_solicitud'    => 6,
             'hora_llegada_encuentro' => now(),
         ]);
 
-        // Notificar al solicitante
-        \App\Models\Notificacion::create([
+        Notificacion::create([
             'id_empleado'  => $this->idEmpleado(),
             'id_solicitud' => $solicitud->id_solicitud,
             'tipo'         => 'encuentro',
@@ -224,7 +236,7 @@ class SolicitudController extends Controller
         }
 
         $solicitud->update([
-            'id_estado_solicitud' => 7,
+            'id_estado_solicitud'  => 7,
             'hora_salida_encuentro' => now(),
         ]);
 
@@ -232,22 +244,16 @@ class SolicitudController extends Controller
             ->with('success', 'Salida del encuentro registrada correctamente.');
     }
 
-
-
-
     public function historial()
     {
         $solicitudes = Solicitud::where('id_solicitante', $this->idEmpleado())
-            ->where('id_estado_solicitud', 8) // Finalizada
+            ->where('id_estado_solicitud', 8)
             ->with(['visitantes', 'solicitudVisitantes.qr.registroAcceso'])
             ->orderBy('fecha_inicio', 'desc')
             ->paginate(10);
 
         return view('solicitudes.historial', compact('solicitudes'));
     }
-
-
-
 
     public function edit($id) { return redirect()->route('solicitudes.show', $id); }
     public function update(\Illuminate\Http\Request $r, $id) { return redirect()->route('solicitudes.show', $id); }

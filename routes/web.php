@@ -86,6 +86,7 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/notificaciones', [NotificacionController::class, 'index'])->name('notificaciones.index');
     Route::post('/notificaciones/{id}/leida', [NotificacionController::class, 'marcarLeida'])->name('notificaciones.leida');
     Route::post('/notificaciones/todas-leidas', [NotificacionController::class, 'marcarTodasLeidas'])->name('notificaciones.todas-leidas');
-});
+    Route::delete('/notificaciones/{id}', [NotificacionController::class, 'eliminar'])->name('notificaciones.eliminar');
+    Route::delete('/notificaciones', [NotificacionController::class, 'eliminarTodas'])->name('notificaciones.eliminarTodas');});
 
 require __DIR__.'/auth.php';

@@ -46,4 +46,26 @@ class NotificacionController extends Controller
         return redirect()->route('notificaciones.index')
             ->with('success', 'Todas las notificaciones marcadas como leídas.');
     }
+
+
+
+    public function eliminar($id)
+    {
+        Notificacion::where('id_notificaciones', $id)
+            ->where('id_empleado', Auth::user()->idSam())
+            ->firstOrFail()
+            ->delete();
+
+        return redirect()->route('notificaciones.index')
+            ->with('success', 'Notificación eliminada.');
+    }
+
+    public function eliminarTodas()
+    {
+        Notificacion::where('id_empleado', Auth::user()->idSam())->delete();
+
+        return redirect()->route('notificaciones.index')
+            ->with('success', 'Todas las notificaciones eliminadas.');
+    }
+
 }

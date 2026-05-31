@@ -20,13 +20,10 @@ class RegistroAcceso extends Model
         'hora_salida_encuentro',
         'hora_salida_institucion',
         'observaciones',
-        'telefono_vigilante_entrada',
-        'caseta_entrada',
-        'telefono_vigilante_salida',
-        'caseta_salida',
+        'telefono_vigilante',
+        'area_vigilante',
         'id_qr',
     ];
-
     public function qr()
     {
         return $this->belongsTo(QR::class, 'id_qr', 'id_qr');
