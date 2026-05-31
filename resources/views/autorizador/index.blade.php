@@ -77,6 +77,10 @@
                         <span class="px-2 py-1 rounded-full text-white text-xs font-semibold
                             @if($s->estado->nombre == 'Pendiente') bg-yellow-500
                             @elseif($s->estado->nombre == 'Autorizada') bg-green-500
+                            @elseif($s->estado->nombre == 'En Institucion') bg-blue-500
+                            @elseif($s->estado->nombre == 'En Encuentro') bg-purple-500
+                            @elseif($s->estado->nombre == 'En Transito a Salida') bg-orange-500
+                            @elseif($s->estado->nombre == 'Finalizada') bg-green-700
                             @elseif($s->estado->nombre == 'Cancelada') bg-gray-500
                             @else bg-red-500 @endif">
                             {{ $s->estado->nombre }}
@@ -104,14 +108,74 @@
                     </div>
                 </div>
 
+                {{-- Seguimiento de estados para visitas en curso --}}
+                @if(in_array($s->id_estado_solicitud, [5, 6, 7, 8]))
+                    <div class="mt-3 mb-3 bg-white rounded-lg border p-3" style="border-color: #A9AAAD;">
+                        <p class="text-xs font-semibold mb-3" style="color: #A9AAAD;">
+                            <i class="fas fa-route mr-1"></i> Seguimiento de la visita
+                        </p>
+                        <div class="flex items-center gap-2 flex-wrap">
+
+                            {{-- Paso 1: Llegó a institución --}}
+                            <div class="flex items-center gap-1">
+                                <span class="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold text-white
+                                    {{ in_array($s->id_estado_solicitud, [5,6,7,8]) ? 'bg-blue-500' : 'bg-gray-300' }}">
+                                    1
+                                </span>
+                                <span class="text-xs font-semibold {{ in_array($s->id_estado_solicitud, [5,6,7,8]) ? 'text-blue-600' : 'text-gray-400' }}">
+                                    Llegó a institución
+                                </span>
+                            </div>
+
+                            <i class="fas fa-chevron-right text-gray-300 text-xs"></i>
+
+                            {{-- Paso 2: En encuentro --}}
+                            <div class="flex items-center gap-1">
+                                <span class="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold text-white
+                                    {{ in_array($s->id_estado_solicitud, [6,7,8]) ? 'bg-purple-500' : 'bg-gray-300' }}">
+                                    2
+                                </span>
+                                <span class="text-xs font-semibold {{ in_array($s->id_estado_solicitud, [6,7,8]) ? 'text-purple-600' : 'text-gray-400' }}">
+                                    En encuentro
+                                </span>
+                            </div>
+
+                            <i class="fas fa-chevron-right text-gray-300 text-xs"></i>
+
+                            {{-- Paso 3: En tránsito --}}
+                            <div class="flex items-center gap-1">
+                                <span class="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold text-white
+                                    {{ in_array($s->id_estado_solicitud, [7,8]) ? 'bg-orange-500' : 'bg-gray-300' }}">
+                                    3
+                                </span>
+                                <span class="text-xs font-semibold {{ in_array($s->id_estado_solicitud, [7,8]) ? 'text-orange-600' : 'text-gray-400' }}">
+                                    En tránsito a salida
+                                </span>
+                            </div>
+
+                            <i class="fas fa-chevron-right text-gray-300 text-xs"></i>
+
+                            {{-- Paso 4: Finalizada --}}
+                            <div class="flex items-center gap-1">
+                                <span class="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold text-white
+                                    {{ $s->id_estado_solicitud == 8 ? 'bg-green-700' : 'bg-gray-300' }}">
+                                    4
+                                </span>
+                                <span class="text-xs font-semibold {{ $s->id_estado_solicitud == 8 ? 'text-green-700' : 'text-gray-400' }}">
+                                    Salió de institución
+                                </span>
+                            </div>
+
+                        </div>
+                    </div>
+                @endif
+
                 @if($s->estado->nombre == 'Pendiente')
                     @if($fechaPasada)
-                        {{-- Fecha vencida --}}
                         <div class="flex justify-between items-center">
                             <span class="text-xs text-red-500 font-semibold flex items-center gap-1 px-3 py-2 bg-red-50 rounded-lg border border-red-200">
                                 <i class="fas fa-ban"></i> Esta solicitud ya no puede autorizarse — la fecha de visita venció
                             </span>
-                            {{-- Botón rechazar para limpiar la lista --}}
                             <form action="{{ route('autorizador.rechazar', $s->id_solicitud) }}" method="POST"
                                 onsubmit="return confirm('La fecha ya venció. ¿Rechazar esta solicitud?')">
                                 @csrf
@@ -122,7 +186,6 @@
                             </form>
                         </div>
                     @else
-                        {{-- Botones normales --}}
                         <div class="flex justify-end gap-3">
                             <form action="{{ route('autorizador.rechazar', $s->id_solicitud) }}" method="POST">
                                 @csrf

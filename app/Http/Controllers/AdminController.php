@@ -31,19 +31,6 @@ class AdminController extends Controller
         ));
     }
 
-    public function exclusiones()
-    {
-        $exclusiones = ListaExclusion::with('visitante')
-            ->orderBy('fecha_bloqueo', 'desc')
-            ->paginate(10);
-
-        $visitantes = Visitante::whereNotIn('id_visitante',
-            ListaExclusion::pluck('id_visitante')
-        )->get();
-
-        return view('admin.exclusiones', compact('exclusiones', 'visitantes'));
-    }
-
     public function storeExclusion(Request $request)
     {
         $request->validate([
@@ -112,6 +99,42 @@ class AdminController extends Controller
         return redirect()->route('admin.visitantes-activos')
             ->with('success', 'Salida registrada correctamente.');
     }
+
+    public function exclusiones(Request $request)
+    {
+        $buscar = $request->get('buscar');
+        $desde  = $request->get('desde');
+        $hasta  = $request->get('hasta');
+
+        $query = ListaExclusion::with('visitante')
+            ->orderBy('fecha_bloqueo', 'desc');
+
+        if ($buscar) {
+            $query->whereHas('visitante', function($q) use ($buscar) {
+                $q->where('nombre', 'like', "%{$buscar}%")
+                ->orWhere('apellidos', 'like', "%{$buscar}%")
+                ->orWhere('correo_personal', 'like', "%{$buscar}%");
+            })->orWhere('motivo_exclusion', 'like', "%{$buscar}%");
+        }
+
+        if ($desde) {
+            $query->whereDate('fecha_bloqueo', '>=', $desde);
+        }
+
+        if ($hasta) {
+            $query->whereDate('fecha_bloqueo', '<=', $hasta);
+        }
+
+        $exclusiones = $query->paginate(10)->withQueryString();
+
+        $visitantes = Visitante::whereNotIn('id_visitante',
+            ListaExclusion::pluck('id_visitante')
+        )->get();
+
+        return view('admin.exclusiones', compact('exclusiones', 'visitantes', 'buscar', 'desde', 'hasta'));
+    }
+
+
 
 
 

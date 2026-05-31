@@ -11,8 +11,9 @@
             </div>
         @endif
 
+        {{-- Agregar --}}
         <div class="bg-white shadow-sm rounded-xl p-6">
-            <h3 class="text-lg font-heading font-semibold text-white mb-4 pb-2 flex items-center gap-2 px-3 py-2 rounded-lg"
+            <h3 class="text-lg font-heading font-semibold text-white mb-4 px-3 py-2 rounded-lg flex items-center gap-2"
                 style="background-color: #E26A23;">
                 <i class="fas fa-user-slash"></i> Agregar a Lista de Exclusión
             </h3>
@@ -25,7 +26,7 @@
                         </label>
                         <select name="id_visitante"
                             class="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2"
-                            style="border-color: #A9AAAD; background-color: #FFF3EC; focus-ring-color: #DA7E2D;">
+                            style="border-color: #A9AAAD; background-color: #FFF3EC;">
                             <option value="">Seleccione un visitante</option>
                             @foreach($visitantes as $v)
                                 <option value="{{ $v->id_visitante }}">
@@ -52,18 +53,63 @@
                 </div>
                 <div class="flex justify-end">
                     <button type="submit"
-                        class="bg-red-600 text-white px-4 py-2 rounded-lg hover:opacity-90 font-heading font-semibold flex items-center gap-2">
+                        class="bg-red-600 text-white px-3 py-1 rounded-lg hover:opacity-90 font-heading font-semibold flex items-center gap-2">
                         <i class="fas fa-ban"></i> Agregar a Lista
                     </button>
                 </div>
             </form>
         </div>
 
+        {{-- Tabla con filtros --}}
         <div class="bg-white shadow-sm rounded-xl p-6">
-            <h3 class="text-lg font-heading font-semibold text-white mb-4 pb-2 flex items-center gap-2 px-3 py-2 rounded-lg"
+            <h3 class="text-lg font-heading font-semibold text-white mb-4 px-3 py-2 rounded-lg flex items-center gap-2"
                 style="background-color: #E26A23;">
                 <i class="fas fa-list"></i> Visitantes Bloqueados
             </h3>
+
+            {{-- Filtros --}}
+            <form method="GET" action="{{ route('admin.exclusiones') }}" class="mb-4">
+                <p class="text-xs mb-2 flex items-center gap-1" style="color: #A9AAAD;">
+                    <i class="fas fa-info-circle"></i> Puedes filtrar por nombre, correo, motivo o rango de fechas — usa uno o combínalos.
+                </p>
+                <div class="flex gap-3 items-end flex-wrap">
+                    <div class="flex-1 min-w-48">
+                        <label class="block text-xs font-semibold text-omg-slate mb-1">
+                            <i class="fas fa-search mr-1"></i> Nombre, correo o motivo
+                        </label>
+                        <input type="text" name="buscar" value="{{ $buscar ?? '' }}"
+                            placeholder="Buscar..."
+                            class="w-full border border-omg-kashmir rounded px-3 py-2 bg-omg-chardon text-sm focus:outline-none focus:ring-2 focus:ring-omg-nile">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-omg-slate mb-1">
+                            <i class="fas fa-calendar mr-1"></i> Desde
+                        </label>
+                        <input type="date" name="desde" value="{{ $desde ?? '' }}"
+                            class="border border-omg-kashmir rounded px-3 py-2 bg-omg-chardon text-sm focus:outline-none focus:ring-2 focus:ring-omg-nile">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-omg-slate mb-1">
+                            <i class="fas fa-calendar mr-1"></i> Hasta
+                        </label>
+                        <input type="date" name="hasta" value="{{ $hasta ?? '' }}"
+                            class="border border-omg-kashmir rounded px-3 py-2 bg-omg-chardon text-sm focus:outline-none focus:ring-2 focus:ring-omg-nile">
+                    </div>
+                    <div class="flex gap-2">
+                        <button type="submit"
+                            class="text-white px-3 py-1 rounded-lg hover:opacity-90 text-sm font-semibold flex items-center gap-1"
+                            style="background-color: #DA7E2D;">
+                            <i class="fas fa-search"></i> Filtrar
+                        </button>
+                        <a href="{{ route('admin.exclusiones') }}"
+                            class="text-white px-3 py-1 rounded-lg hover:opacity-90 text-sm font-semibold flex items-center gap-1"
+                            style="background-color: #A9AAAD;">
+                            <i class="fas fa-times"></i> Limpiar
+                        </a>
+                    </div>
+                </div>
+            </form>
+
             <table class="w-full text-sm text-left border">
                 <thead class="text-white" style="background-color: #E26A23;">
                     <tr>
@@ -79,10 +125,12 @@
                     <tr class="border-b"
                         onmouseover="this.style.backgroundColor='#FFF3EC'"
                         onmouseout="this.style.backgroundColor='transparent'">
-                        <td class="px-4 py-2">{{ $e->visitante->nombre }} {{ $e->visitante->apellidos }}</td>
+                        <td class="px-4 py-2 font-semibold">{{ $e->visitante->nombre }} {{ $e->visitante->apellidos }}</td>
                         <td class="px-4 py-2">{{ $e->visitante->correo_personal }}</td>
                         <td class="px-4 py-2">{{ $e->motivo_exclusion }}</td>
-                        <td class="px-4 py-2">{{ $e->fecha_bloqueo }}</td>
+                        <td class="px-4 py-2">
+                            {{ \Carbon\Carbon::parse($e->fecha_bloqueo)->format('d/m/Y') }}
+                        </td>
                         <td class="px-4 py-2">
                             <form action="{{ route('admin.exclusiones.destroy', $e->id_lista_exclusion) }}"
                                 method="POST"
