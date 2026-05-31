@@ -135,7 +135,45 @@ class AdminController extends Controller
     }
 
 
+    public function reporteVisitas(Request $request)
+    {
+        $buscar = $request->get('buscar');
+        $desde  = $request->get('desde');
+        $hasta  = $request->get('hasta');
 
+        $query = Solicitud::with([
+            'solicitante',
+            'visitantes',
+            'tipo',
+            'estado',
+            'solicitudVisitantes.qr',
+        ])->where('id_estado_solicitud', 8); // Solo finalizadas
+
+        if ($buscar) {
+            $query->where(function($q) use ($buscar) {
+                $q->where('folio', 'like', "%{$buscar}%")
+                ->orWhereHas('visitantes', fn($qv) =>
+                    $qv->where('nombre', 'like', "%{$buscar}%")
+                        ->orWhere('apellidos', 'like', "%{$buscar}%")
+                )
+                ->orWhereHas('solicitante', fn($qs) =>
+                    $qs->where('name', 'like', "%{$buscar}%")
+                );
+            });
+        }
+
+        if ($desde) {
+            $query->whereDate('fecha_inicio', '>=', $desde);
+        }
+
+        if ($hasta) {
+            $query->whereDate('fecha_inicio', '<=', $hasta);
+        }
+
+        $solicitudes = $query->orderBy('fecha_inicio', 'desc')->paginate(15)->withQueryString();
+
+        return view('admin.reporte-visitas', compact('solicitudes', 'buscar', 'desde', 'hasta'));
+    }
 
 
 

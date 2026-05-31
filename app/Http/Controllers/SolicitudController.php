@@ -248,7 +248,7 @@ class SolicitudController extends Controller
     {
         $solicitudes = Solicitud::where('id_solicitante', $this->idEmpleado())
             ->where('id_estado_solicitud', 8)
-            ->with(['visitantes', 'solicitudVisitantes.qr.registroAcceso'])
+            ->with(['visitantes', 'solicitudVisitantes.qr'])
             ->orderBy('fecha_inicio', 'desc')
             ->paginate(10);
 

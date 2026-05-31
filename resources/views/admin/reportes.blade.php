@@ -31,7 +31,7 @@
                 <p class="text-3xl font-bold" style="color: #E26A23;">{{ $totalAccesos }}</p>
             </div>
             <div class="bg-white rounded-xl p-5 shadow-sm" style="border-left: 4px solid #DA7E2D;">
-                <p class="text-xs font-semibold" style="color: #A9AAAD;"><i class="fas fa-user-check mr-1"></i> En Campus</p>
+                <p class="text-xs font-semibold" style="color: #A9AAAD;"><i class="fas fa-user-check mr-1"></i> En Institución</p>
                 <p class="text-3xl font-bold" style="color: #DA7E2D;">{{ $visitantesActivos }}</p>
             </div>
         </div>
@@ -41,11 +41,18 @@
                 <h3 class="text-lg font-heading font-semibold flex items-center gap-2" style="color: #DA7E2D;">
                     <i class="fas fa-history"></i> Últimas 10 Solicitudes
                 </h3>
-                <a href="{{ route('admin.visitantes-activos') }}"
-                   class="text-white px-4 py-2 rounded hover:opacity-90 font-heading font-semibold flex items-center gap-2 text-sm"
-                   style="background-color: #DA7E2D;">
-                    <i class="fas fa-user-check"></i> Ver Visitantes Activos
-                </a>
+                <div class="flex gap-2">
+                    <a href="{{ route('admin.reporte-visitas') }}"
+                       class="text-white px-4 py-2 rounded hover:opacity-90 font-heading font-semibold flex items-center gap-2 text-sm"
+                       style="background-color: #3B5675;">
+                        <i class="fas fa-chart-line"></i> Reporte de Visitas
+                    </a>
+                    <a href="{{ route('admin.visitantes-activos') }}"
+                       class="text-white px-4 py-2 rounded hover:opacity-90 font-heading font-semibold flex items-center gap-2 text-sm"
+                       style="background-color: #DA7E2D;">
+                        <i class="fas fa-user-check"></i> Ver Visitantes Activos
+                    </a>
+                </div>
             </div>
 
             <table class="w-full text-sm text-left border">
@@ -67,12 +74,16 @@
                             {{ $s->folio ?? '—' }}
                         </td>
                         <td class="px-4 py-2">{{ $s->solicitante->name ?? 'N/A' }}</td>
-                        <td class="px-4 py-2">{{ $s->fecha_inicio }}</td>
+                        <td class="px-4 py-2">{{ \Carbon\Carbon::parse($s->fecha_inicio)->format('d/m/Y H:i') }}</td>
                         <td class="px-4 py-2">{{ $s->tipo->nombre ?? 'N/A' }}</td>
                         <td class="px-4 py-2">
                             <span class="px-2 py-1 rounded-full text-white text-xs font-semibold
                                 @if($s->estado->nombre == 'Pendiente') bg-yellow-500
                                 @elseif($s->estado->nombre == 'Autorizada') bg-green-500
+                                @elseif($s->estado->nombre == 'En Institucion') bg-blue-500
+                                @elseif($s->estado->nombre == 'En Encuentro') bg-purple-500
+                                @elseif($s->estado->nombre == 'En Transito a Salida') bg-orange-500
+                                @elseif($s->estado->nombre == 'Finalizada') bg-green-700
                                 @elseif($s->estado->nombre == 'Cancelada') bg-gray-500
                                 @else bg-red-500 @endif">
                                 {{ $s->estado->nombre }}

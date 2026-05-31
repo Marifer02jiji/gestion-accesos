@@ -62,6 +62,7 @@ Route::middleware(['auth', 'role:administrador'])->group(function () {
     Route::delete('/admin/exclusiones/{id}', [AdminController::class, 'destroyExclusion'])->name('admin.exclusiones.destroy');
     Route::get('/admin/visitantes-activos', [AdminController::class, 'visitantesActivos'])->name('admin.visitantes-activos');
     Route::post('/admin/registrar-salida', [AdminController::class, 'registrarSalida'])->name('admin.registrarSalida');
+    Route::get('/admin/reporte-visitas', [AdminController::class, 'reporteVisitas'])->name('admin.reporte-visitas');
 });
 
 // Rutas Organizador

@@ -35,4 +35,10 @@ class QR extends Model
 
         return $codigo;
     }
+
+
+    public function registroAcceso()
+    {
+        return $this->hasMany(RegistroAcceso::class, 'id_qr', 'id_qr');
+    }
 }
