@@ -13,6 +13,7 @@ use App\Mail\EnviarQRMail;
 use App\Services\FlujoAccesoService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 
@@ -21,6 +22,51 @@ class SolicitudApiController extends Controller
     private function idEmpleado(): int
     {
         return auth()->user()->idSam();
+    }
+
+    /** Estados en los que el solicitante puede consultar o enviar el QR por correo. */
+    private function estadosPermitenEnvioQr(): array
+    {
+        return [
+            FlujoAccesoService::ESTADO_AUTORIZADA,
+            FlujoAccesoService::ESTADO_EN_INSTITUCION,
+            FlujoAccesoService::ESTADO_EN_ENCUENTRO,
+            FlujoAccesoService::ESTADO_EN_TRANSITO_SALIDA,
+        ];
+    }
+
+    private function solicitantesVisiblesAutorizador(): array
+    {
+        $id = $this->idEmpleado();
+
+        $subordinados = DB::connection('sam')
+            ->table('empleados')
+            ->where('jefe', $id)
+            ->pluck('id_empleado')
+            ->toArray();
+
+        $idDepartamento = DB::connection('sam')
+            ->table('empleados')
+            ->where('id_empleado', $id)
+            ->value('id_departamento');
+
+        $delDepartamento = $idDepartamento
+            ? DB::connection('sam')
+                ->table('empleados')
+                ->where('id_departamento', $idDepartamento)
+                ->pluck('id_empleado')
+                ->toArray()
+            : [];
+
+        return array_values(array_unique(array_merge($subordinados, $delDepartamento)));
+    }
+
+    private function puedeGestionarComoAutorizador(Solicitud $solicitud): bool
+    {
+        $visibles = $this->solicitantesVisiblesAutorizador();
+
+        return in_array((int) $solicitud->id_solicitante, $visibles, true)
+            && (int) $solicitud->id_solicitante !== $this->idEmpleado();
     }
 
     private function formatearSolicitudParaMovil($solicitud)
@@ -213,8 +259,8 @@ class SolicitudApiController extends Controller
     {
         $solicitud = Solicitud::with('solicitudVisitantes.qr')->findOrFail($id);
 
-        if ($solicitud->id_estado_solicitud !== 2) {
-            return response()->json(['message' => 'La solicitud no esta autorizada.', 'data' => null], 422);
+        if (!in_array((int) $solicitud->id_estado_solicitud, $this->estadosPermitenEnvioQr(), true)) {
+            return response()->json(['message' => 'La solicitud no esta autorizada o ya finalizo.', 'data' => null], 422);
         }
 
         $qrs = $solicitud->solicitudVisitantes->map(fn($sv) => $sv->qr)->filter()->values();
@@ -226,7 +272,11 @@ class SolicitudApiController extends Controller
     {
         $solicitud = Solicitud::with(['estado', 'tipo', 'visitantes', 'solicitudVisitantes.qr', 'solicitudVisitantes.visitante', 'solicitante'])->findOrFail($id);
 
-        if ($solicitud->id_estado_solicitud !== 2) {
+        if ((int) $solicitud->id_solicitante !== $this->idEmpleado()) {
+            return response()->json(['message' => 'Solo el solicitante puede enviar el QR.', 'data' => null], 403);
+        }
+
+        if (!in_array((int) $solicitud->id_estado_solicitud, $this->estadosPermitenEnvioQr(), true)) {
             return response()->json(['message' => 'La solicitud debe estar autorizada para enviar el QR.', 'data' => null], 422);
         }
 
@@ -261,7 +311,11 @@ class SolicitudApiController extends Controller
     {
         $solicitud = Solicitud::with(['solicitudVisitantes.qr', 'solicitudVisitantes.visitante'])->findOrFail($id);
 
-        if ($solicitud->id_estado_solicitud !== 2) {
+        if ((int) $solicitud->id_solicitante !== $this->idEmpleado()) {
+            return response()->json(['message' => 'Solo el solicitante puede reenviar el QR.', 'data' => null], 403);
+        }
+
+        if (!in_array((int) $solicitud->id_estado_solicitud, $this->estadosPermitenEnvioQr(), true)) {
             return response()->json(['message' => 'La solicitud debe estar autorizada para reenviar el QR.', 'data' => null], 422);
         }
 
@@ -403,7 +457,11 @@ class SolicitudApiController extends Controller
         $this->cancelarPendientesVencidas();
 
         $filtro = strtolower($request->get('filtro', 'pendientes'));
-        $query  = Solicitud::with(['estado', 'tipo', 'visitantes', 'solicitante']);
+        $visibles = $this->solicitantesVisiblesAutorizador();
+
+        $query  = Solicitud::with(['estado', 'tipo', 'visitantes', 'solicitante'])
+            ->whereIn('id_solicitante', $visibles)
+            ->where('id_solicitante', '!=', $this->idEmpleado());
 
         match ($filtro) {
             'autorizadas', 'aprobadas' => $query->where('id_estado_solicitud', 2),
@@ -423,8 +481,19 @@ class SolicitudApiController extends Controller
     {
         $solicitud = Solicitud::with('solicitudVisitantes.visitante')->findOrFail($id);
 
+        if (!$this->puedeGestionarComoAutorizador($solicitud)) {
+            return response()->json([
+                'message' => 'No puede autorizar sus propias solicitudes ni solicitudes fuera de su ambito.',
+                'data'    => null,
+            ], 403);
+        }
+
         if ((int) $solicitud->id_estado_solicitud !== 1) {
             return response()->json(['message' => 'Esta solicitud ya fue procesada.', 'data' => null], 422);
+        }
+
+        if ($this->diaEncuentroPasado($solicitud)) {
+            return response()->json(['message' => 'No se puede autorizar: la fecha del encuentro ya paso.', 'data' => null], 422);
         }
 
         if ($this->solicitudYaVencio($solicitud)) {
@@ -467,6 +536,13 @@ class SolicitudApiController extends Controller
     public function rechazar($id)
     {
         $solicitud = Solicitud::findOrFail($id);
+
+        if (!$this->puedeGestionarComoAutorizador($solicitud)) {
+            return response()->json([
+                'message' => 'No puede rechazar sus propias solicitudes ni solicitudes fuera de su ambito.',
+                'data'    => null,
+            ], 403);
+        }
 
         if ((int) $solicitud->id_estado_solicitud !== 1) {
             return response()->json(['message' => 'Esta solicitud ya fue procesada.', 'data' => null], 422);

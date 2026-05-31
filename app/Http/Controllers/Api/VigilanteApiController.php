@@ -196,6 +196,14 @@ class VigilanteApiController extends Controller
                 $salidaRegistrada = $registro?->hora_salida_institucion !== null
                     || $idEstado === FlujoAccesoService::ESTADO_FINALIZADA;
 
+                if ($salidaRegistrada) {
+                    $idEstado     = FlujoAccesoService::ESTADO_FINALIZADA;
+                    $nombreEstado = 'Finalizada';
+                } elseif ($entradaRegistrada && $idEstado < FlujoAccesoService::ESTADO_EN_INSTITUCION) {
+                    $idEstado     = FlujoAccesoService::ESTADO_EN_INSTITUCION;
+                    $nombreEstado = 'En Institución';
+                }
+
                 return [
                     'id_solicitud'        => $solicitud->id_solicitud,
                     'folio'               => $solicitud->folio,
