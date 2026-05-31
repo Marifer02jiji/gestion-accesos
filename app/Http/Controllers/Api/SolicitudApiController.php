@@ -306,9 +306,19 @@ class SolicitudApiController extends Controller
         $errores  = 0;
 
         foreach ($solicitud->solicitudVisitantes as $sv) {
-            $qr     = $sv->qr;
-            $correo = $sv->visitante->correo_personal ?? null;
-            if (!$qr || !$correo) continue;
+            $qr = $sv->qr;
+            if (!$qr) {
+                $errores++;
+                continue;
+            }
+
+            $correo = trim((string) ($sv->visitante->correo_personal ?? ''));
+            if ($correo === '') {
+                $errores++;
+                Log::warning("enviarQR: visitante sin correo — solicitud {$id}, sv {$sv->id_solicitud_visitante}");
+                continue;
+            }
+
             try {
                 Mail::to($correo)->send(new EnviarQRMail($qr));
                 $enviados++;
@@ -319,7 +329,14 @@ class SolicitudApiController extends Controller
         }
 
         if ($enviados === 0) {
-            return response()->json(['message' => 'No se pudo enviar el QR. Verifique que exista QR y correo del visitante.', 'data' => ['enviados' => 0, 'errores' => $errores]], 500);
+            $detalle = $errores > 0
+                ? 'Revise correo del visitante y configuración de correo (MAIL_*).'
+                : 'No hay código QR generado para esta solicitud. Autorícela de nuevo o contacte soporte.';
+
+            return response()->json([
+                'message' => 'No se pudo enviar el QR. ' . $detalle,
+                'data'    => ['enviados' => 0, 'errores' => $errores],
+            ], 500);
         }
 
         return response()->json(['message' => "QR enviado correctamente a {$enviados} visitante(s).", 'data' => ['enviados' => $enviados, 'errores' => $errores]]);
