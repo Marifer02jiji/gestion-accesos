@@ -166,32 +166,48 @@ class VigilanteApiController extends Controller
 
     public function visitasHoy(): JsonResponse
     {
-        $visitas = Solicitud::with(['visitantes', 'solicitudVisitantes.qr'])
-            ->where('id_estado_solicitud', 2)
+        $estadosVisibles = [
+            FlujoAccesoService::ESTADO_AUTORIZADA,
+            FlujoAccesoService::ESTADO_EN_INSTITUCION,
+            FlujoAccesoService::ESTADO_EN_ENCUENTRO,
+            FlujoAccesoService::ESTADO_EN_TRANSITO_SALIDA,
+            FlujoAccesoService::ESTADO_FINALIZADA,
+        ];
+
+        $visitas = Solicitud::with(['visitantes', 'estado', 'solicitudVisitantes.qr'])
+            ->whereIn('id_estado_solicitud', $estadosVisibles)
             ->whereDate('fecha_inicio', today())
+            ->orderBy('fecha_inicio')
             ->get()
             ->map(function ($solicitud) {
                 $registro = RegistroAcceso::whereHas(
                     'qr.solicitudVisitante.solicitud',
-                    fn($q) => $q->where('id_solicitud', $solicitud->id_solicitud)
+                    fn ($q) => $q->where('id_solicitud', $solicitud->id_solicitud)
                 )
                     ->orderByDesc('id_registro')
                     ->first();
 
-                $estado = 'autorizada';
-                if ($registro?->hora_llegada_institucion && !$registro?->hora_salida_institucion) {
-                    $estado = 'dentro';
-                } elseif ($registro?->hora_salida_institucion) {
-                    $estado = 'salio';
-                }
+                $idEstado     = (int) $solicitud->id_estado_solicitud;
+                $nombreEstado = trim($solicitud->estado->nombre ?? '');
+
+                $entradaRegistrada = $registro?->hora_llegada_institucion !== null
+                    || $idEstado >= FlujoAccesoService::ESTADO_EN_INSTITUCION;
+
+                $salidaRegistrada = $registro?->hora_salida_institucion !== null
+                    || $idEstado === FlujoAccesoService::ESTADO_FINALIZADA;
 
                 return [
-                    'id_solicitud'    => $solicitud->id_solicitud,
-                    'folio'           => $solicitud->folio,
-                    'lugar_encuentro' => $solicitud->lugar_encuentro,
-                    'hora_inicio'     => $solicitud->fecha_inicio,
-                    'estado'          => $estado,
-                    'visitantes'      => $solicitud->visitantes->map(fn($v) => [
+                    'id_solicitud'        => $solicitud->id_solicitud,
+                    'folio'               => $solicitud->folio,
+                    'motivo_visita'       => $solicitud->motivo_visita,
+                    'lugar_encuentro'     => $solicitud->lugar_encuentro,
+                    'hora_inicio'         => $solicitud->fecha_inicio,
+                    'id_estado_solicitud' => $idEstado,
+                    'estado'              => $nombreEstado,
+                    'estado_nombre'       => $nombreEstado,
+                    'entrada_registrada'  => $entradaRegistrada,
+                    'salida_registrada'   => $salidaRegistrada,
+                    'visitantes'          => $solicitud->visitantes->map(fn ($v) => [
                         'nombre'    => $v->nombre,
                         'apellidos' => $v->apellidos,
                     ]),
