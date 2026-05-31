@@ -6,53 +6,51 @@ use App\Models\Notificacion;
 use App\Models\QR;
 use App\Models\Solicitud;
 use App\Models\SolicitudVisitante;
+use App\Services\AutorizacionVisitaService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\DB;
 
 class AutorizadorController extends Controller
 {
+    public function __construct(
+        private readonly AutorizacionVisitaService $autorizacionVisita
+    ) {
+    }
+
     private function idEmpleado(): int
     {
         return Auth::user()->idSam();
     }
 
-    private function subordinados(): array
+    private function solicitantesVisibles(): array
     {
-        return DB::connection('sam')
-            ->table('empleados')
-            ->where('jefe', $this->idEmpleado())
-            ->pluck('id_empleado')
-            ->toArray();
+        return $this->autorizacionVisita->idsSolicitantesAutorizables(
+            $this->idEmpleado(),
+            (string) (Auth::user()->name ?? '')
+        );
     }
 
-    private function empleadosDepartamento(): array
+    private function aplicarFiltroSolicitantes($query)
     {
-        $dept = DB::connection('sam')
-            ->table('empleados')
-            ->where('id_empleado', $this->idEmpleado())
-            ->value('id_departamento');
+        $idPropio  = $this->idEmpleado();
+        $visibles  = array_values(array_filter(
+            $this->solicitantesVisibles(),
+            fn ($id) => (int) $id > 0 && (int) $id !== $idPropio
+        ));
 
-        if (!$dept) return [];
+        if (!empty($visibles)) {
+            return $query->whereIn('id_solicitante', $visibles);
+        }
 
-        return DB::connection('sam')
-            ->table('empleados')
-            ->where('id_departamento', $dept)
-            ->pluck('id_empleado')
-            ->toArray();
+        return $query->where('id_solicitante', '!=', $idPropio);
     }
 
     public function index(Request $request)
     {
-        $filtro               = $request->get('filtro', 'pendientes');
-        $solicitantesVisibles = array_unique(array_merge(
-            $this->subordinados(),
-            $this->empleadosDepartamento()
-        ));
+        $filtro = $request->get('filtro', 'pendientes');
 
-        $query = Solicitud::with(['estado', 'tipo', 'visitantes', 'solicitante'])
-            ->whereIn('id_solicitante', $solicitantesVisibles)
-            ->where('id_solicitante', '!=', $this->idEmpleado());
+        $query = Solicitud::with(['estado', 'tipo', 'visitantes', 'solicitante']);
+        $query = $this->aplicarFiltroSolicitantes($query);
 
         match($filtro) {
             'aprobadas'  => $query->where('id_estado_solicitud', 2),
@@ -70,13 +68,11 @@ class AutorizadorController extends Controller
     {
         $solicitud = Solicitud::with('solicitudVisitantes.visitante')->findOrFail($id);
 
-        // Validar permiso
-        $solicitantesVisibles = array_unique(array_merge(
-            $this->subordinados(),
-            $this->empleadosDepartamento()
-        ));
-
-        if (!in_array($solicitud->id_solicitante, $solicitantesVisibles)) {
+        if (!$this->autorizacionVisita->puedeGestionarSolicitud(
+            $this->idEmpleado(),
+            (string) (Auth::user()->name ?? ''),
+            (int) $solicitud->id_solicitante
+        )) {
             return redirect()->route('autorizador.index')
                 ->with('error', 'No tienes permiso para autorizar esta solicitud.');
         }
@@ -129,13 +125,11 @@ class AutorizadorController extends Controller
     {
         $solicitud = Solicitud::findOrFail($id);
 
-        // Validar permiso
-        $solicitantesVisibles = array_unique(array_merge(
-            $this->subordinados(),
-            $this->empleadosDepartamento()
-        ));
-
-        if (!in_array($solicitud->id_solicitante, $solicitantesVisibles)) {
+        if (!$this->autorizacionVisita->puedeGestionarSolicitud(
+            $this->idEmpleado(),
+            (string) (Auth::user()->name ?? ''),
+            (int) $solicitud->id_solicitante
+        )) {
             return redirect()->route('autorizador.index')
                 ->with('error', 'No tienes permiso para rechazar esta solicitud.');
         }

@@ -19,8 +19,8 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Empleado;
-use App\Models\Notificacion;
 use App\Models\User;
+use App\Services\AutorizacionVisitaService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Spatie\Permission\Models\Role;
@@ -126,7 +126,13 @@ class AuthController extends Controller
             true
         );
 
-        if (($esJefe || $esDeptoAutorizador) && !$user->hasRole('autorizador')) {
+        $esAutorizadorPorMatriz = app(AutorizacionVisitaService::class)
+            ->usuarioEsAutorizadorConfigurado($usuarioInput);
+
+        if (
+            ($esJefe || $esDeptoAutorizador || $esAutorizadorPorMatriz)
+            && !$user->hasRole('autorizador')
+        ) {
             $user->assignRole('autorizador');
         }
 
@@ -151,6 +157,7 @@ class AuthController extends Controller
                 'id_empleado_sam' => $empleado->id_empleado,
                 'name'            => trim($empleado->nombre . ' ' . $empleado->apellidoPa),
                 'email'           => $user->email,
+                'usuario_sam'     => $usuarioInput,
                 'rol'             => $rolFinal,
                 'rol_api'         => $rolFinal,
                 'roles'           => $roles,
@@ -186,19 +193,6 @@ class AuthController extends Controller
         ]);
     }
 
-    public function notificaciones(Request $request)
-    {
-        $user = $request->user();
-
-        $notificaciones = Notificacion::where('id_empleado', $user->idSam())
-            ->orderBy('fecha_creado', 'desc')
-            ->paginate(10);
-
-        return response()->json([
-            'message' => 'Notificaciones obtenidas correctamente.',
-            'data'    => $notificaciones,
-        ]);
-    }
 }
 
 

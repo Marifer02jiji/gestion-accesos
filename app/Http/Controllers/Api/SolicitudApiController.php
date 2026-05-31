@@ -10,6 +10,7 @@ use App\Models\Solicitud;
 use App\Models\SolicitudVisitante;
 use App\Models\Visitante;
 use App\Mail\EnviarQRMail;
+use App\Services\AutorizacionVisitaService;
 use App\Services\FlujoAccesoService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -19,9 +20,19 @@ use Illuminate\Support\Facades\Mail;
 
 class SolicitudApiController extends Controller
 {
+    public function __construct(
+        private readonly AutorizacionVisitaService $autorizacionVisita
+    ) {
+    }
+
     private function idEmpleado(): int
     {
         return auth()->user()->idSam();
+    }
+
+    private function usuarioSamAutorizador(): string
+    {
+        return (string) (auth()->user()->name ?? '');
     }
 
     /** Estados en los que el solicitante puede consultar o enviar el QR por correo. */
@@ -37,36 +48,43 @@ class SolicitudApiController extends Controller
 
     private function solicitantesVisiblesAutorizador(): array
     {
-        $id = $this->idEmpleado();
+        return $this->autorizacionVisita->idsSolicitantesAutorizables(
+            $this->idEmpleado(),
+            $this->usuarioSamAutorizador()
+        );
+    }
 
-        $subordinados = DB::connection('sam')
-            ->table('empleados')
-            ->where('jefe', $id)
-            ->pluck('id_empleado')
-            ->toArray();
+    private function aplicarFiltroSolicitantesAutorizador($query)
+    {
+        $idPropio   = $this->idEmpleado();
+        $visibles   = $this->solicitantesVisiblesAutorizador();
+        $filtrados  = array_values(array_filter(
+            array_map('intval', $visibles),
+            fn ($id) => $id > 0 && $id !== $idPropio
+        ));
 
-        $idDepartamento = DB::connection('sam')
-            ->table('empleados')
-            ->where('id_empleado', $id)
-            ->value('id_departamento');
+        if (!empty($filtrados)) {
+            return $query->whereIn('id_solicitante', $filtrados);
+        }
 
-        $delDepartamento = $idDepartamento
-            ? DB::connection('sam')
-                ->table('empleados')
-                ->where('id_departamento', $idDepartamento)
-                ->pluck('id_empleado')
-                ->toArray()
-            : [];
-
-        return array_values(array_unique(array_merge($subordinados, $delDepartamento)));
+        // Sin empleados en SAM: no usar whereIn([]) (devuelve 0 filas).
+        // Mostrar pendientes de otros, excluyendo las propias.
+        return $query->where('id_solicitante', '!=', $idPropio);
     }
 
     private function puedeGestionarComoAutorizador(Solicitud $solicitud): bool
     {
-        $visibles = $this->solicitantesVisiblesAutorizador();
+        $idPropio = $this->idEmpleado();
 
-        return in_array((int) $solicitud->id_solicitante, $visibles, true)
-            && (int) $solicitud->id_solicitante !== $this->idEmpleado();
+        if ((int) $solicitud->id_solicitante === $idPropio) {
+            return false;
+        }
+
+        return $this->autorizacionVisita->puedeGestionarSolicitud(
+            $this->idEmpleado(),
+            $this->usuarioSamAutorizador(),
+            (int) $solicitud->id_solicitante
+        );
     }
 
     private function formatearSolicitudParaMovil($solicitud)
@@ -457,11 +475,9 @@ class SolicitudApiController extends Controller
         $this->cancelarPendientesVencidas();
 
         $filtro = strtolower($request->get('filtro', 'pendientes'));
-        $visibles = $this->solicitantesVisiblesAutorizador();
 
-        $query  = Solicitud::with(['estado', 'tipo', 'visitantes', 'solicitante'])
-            ->whereIn('id_solicitante', $visibles)
-            ->where('id_solicitante', '!=', $this->idEmpleado());
+        $query  = Solicitud::with(['estado', 'tipo', 'visitantes', 'solicitante']);
+        $this->aplicarFiltroSolicitantesAutorizador($query);
 
         match ($filtro) {
             'autorizadas', 'aprobadas' => $query->where('id_estado_solicitud', 2),

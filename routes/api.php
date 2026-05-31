@@ -11,6 +11,7 @@
 // =============================================================================
 
 use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\Api\NotificacionApiController;
 use App\Http\Controllers\Api\SolicitudApiController;
 use App\Http\Controllers\Api\VigilanteApiController;
 use Illuminate\Support\Facades\Route;
@@ -45,7 +46,11 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/autorizador/{id}/autorizar',   [SolicitudApiController::class, 'autorizar']);
     Route::post('/autorizador/{id}/rechazar',    [SolicitudApiController::class, 'rechazar']);
 
-    Route::get('/notificaciones', [AuthController::class, 'notificaciones']);
+    Route::get('/notificaciones', [NotificacionApiController::class, 'index']);
+    Route::post('/notificaciones/todas-leidas', [NotificacionApiController::class, 'marcarTodasLeidas']);
+    Route::delete('/notificaciones', [NotificacionApiController::class, 'eliminarTodas']);
+    Route::post('/notificaciones/{id}/leida', [NotificacionApiController::class, 'marcarLeida']);
+    Route::delete('/notificaciones/{id}', [NotificacionApiController::class, 'eliminar']);
 
     Route::get('/visitas/activas', [SolicitudApiController::class, 'activas']);
     Route::post('/visitas/{id}/confirmar-llegada', [SolicitudApiController::class, 'confirmarLlegada']);
