@@ -1,6 +1,6 @@
 <x-app-layout>
     <x-slot name="header">
-        Dashboard
+        <span style="color: #3B5675;">Dashboard</span>
     </x-slot>
 
     <div class="flex flex-wrap gap-6">
@@ -90,10 +90,26 @@
                 </div>
                 <div>
                     <h3 class="font-heading font-bold text-omg-nile text-lg">Visitantes Activos</h3>
-                    <p class="text-sm text-omg-slate">En campus ahora</p>
+                    <p class="text-sm text-omg-slate">En institución ahora</p>
                 </div>
             </div>
-            <p class="text-sm text-gray-500"><i class="fas fa-info-circle mr-1"></i> Ver quién está dentro del campus.</p>
+            <p class="text-sm text-gray-500"><i class="fas fa-info-circle mr-1"></i> Ver quién está dentro de la institución.</p>
+        </a>
+        @endrole
+
+        @role('organizador')
+        <a href="{{ route('eventos.index') }}"
+            class="w-80 bg-white shadow-sm rounded-xl p-6 hover:shadow-md transition border-l-4 border-purple-600">
+            <div class="flex items-center gap-4 mb-3">
+                <div class="bg-omg-chardon p-4 rounded-full">
+                    <i class="fas fa-calendar-alt text-purple-600 text-2xl"></i>
+                </div>
+                <div>
+                    <h3 class="font-heading font-bold text-omg-nile text-lg">Eventos</h3>
+                    <p class="text-sm text-omg-slate">Gestión de eventos y QR grupal</p>
+                </div>
+            </div>
+            <p class="text-sm text-gray-500"><i class="fas fa-info-circle mr-1"></i> Crea eventos y genera QR para grupos.</p>
         </a>
         @endrole
 

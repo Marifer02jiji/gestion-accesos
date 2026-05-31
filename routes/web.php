@@ -6,8 +6,10 @@ use App\Http\Controllers\AutorizadorController;
 use App\Http\Controllers\VigilanteController;
 use App\Http\Controllers\AdminController;
 use App\Http\Controllers\NotificacionController;
+use App\Http\Controllers\EventoController;
 use App\Models\QR;
 use Illuminate\Support\Facades\Route;
+
 
 Route::get('/', function () {
     return redirect()->route('dashboard');
@@ -19,6 +21,7 @@ Route::get('/dashboard', function () {
 
 // Rutas Solicitante
 Route::middleware(['auth', 'role:solicitante'])->group(function () {
+    Route::get('/solicitudes/historial', [SolicitudController::class, 'historial'])->name('solicitudes.historial');
     Route::resource('solicitudes', SolicitudController::class);
     Route::post('/solicitudes/{id}/cancelar', [SolicitudController::class, 'cancelar'])->name('solicitudes.cancelar');
     Route::post('/solicitudes/{id}/enviar-qr', [SolicitudController::class, 'enviarQR'])->name('solicitudes.enviarQR');
@@ -29,11 +32,8 @@ Route::middleware(['auth', 'role:solicitante'])->group(function () {
             ->first();
         return view('solicitudes.qr', compact('qr'));
     })->name('solicitudes.qr');
-
     Route::post('/solicitudes/{id}/llegada-encuentro', [SolicitudController::class, 'registrarLlegadaEncuentro'])->name('solicitudes.llegadaEncuentro');
     Route::post('/solicitudes/{id}/salida-encuentro', [SolicitudController::class, 'registrarSalidaEncuentro'])->name('solicitudes.salidaEncuentro');
-    Route::get('/solicitudes/historial', [SolicitudController::class, 'historial'])->name('solicitudes.historial');
-    Route::get('/solicitudes/{id}', [SolicitudController::class, 'show'])->name('solicitudes.show');
 });
 
 // Rutas Autorizador
@@ -62,15 +62,26 @@ Route::middleware(['auth', 'role:administrador'])->group(function () {
     Route::delete('/admin/exclusiones/{id}', [AdminController::class, 'destroyExclusion'])->name('admin.exclusiones.destroy');
     Route::get('/admin/visitantes-activos', [AdminController::class, 'visitantesActivos'])->name('admin.visitantes-activos');
     Route::post('/admin/registrar-salida', [AdminController::class, 'registrarSalida'])->name('admin.registrarSalida');
-
 });
 
+// Rutas Organizador
+Route::middleware(['auth', 'role:organizador'])->group(function () {
+    Route::get('/eventos', [EventoController::class, 'index'])->name('eventos.index');
+    Route::get('/eventos/crear', [EventoController::class, 'create'])->name('eventos.create');
+    Route::post('/eventos', [EventoController::class, 'store'])->name('eventos.store');
+    Route::get('/eventos/{id}', [EventoController::class, 'show'])->name('eventos.show');
+    Route::post('/eventos/{id}/reenviar-qr', [EventoController::class, 'reenviarQR'])->name('eventos.reenviarQR');
+    Route::delete('/eventos/{id}', [EventoController::class, 'destroy'])->name('eventos.destroy');
+});
+
+// Rutas de perfil
 Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 });
 
+// Notificaciones
 Route::middleware(['auth'])->group(function () {
     Route::get('/notificaciones', [NotificacionController::class, 'index'])->name('notificaciones.index');
     Route::post('/notificaciones/{id}/leida', [NotificacionController::class, 'marcarLeida'])->name('notificaciones.leida');
