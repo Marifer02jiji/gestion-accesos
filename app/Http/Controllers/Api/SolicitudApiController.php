@@ -10,6 +10,7 @@ use App\Models\Solicitud;
 use App\Models\SolicitudVisitante;
 use App\Models\Visitante;
 use App\Mail\EnviarQRMail;
+use App\Services\FlujoAccesoService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
@@ -312,29 +313,77 @@ class SolicitudApiController extends Controller
 
     public function activas(Request $request)
     {
+        $flujo = new FlujoAccesoService();
+
         $solicitudes = Solicitud::where('id_solicitante', $request->user()->idSam())
-            ->where('id_estado_solicitud', 2)
-            ->with(['visitantes', 'estado', 'tipo'])
+            ->whereIn('id_estado_solicitud', [
+                FlujoAccesoService::ESTADO_AUTORIZADA,
+                FlujoAccesoService::ESTADO_EN_INSTITUCION,
+                FlujoAccesoService::ESTADO_EN_ENCUENTRO,
+                FlujoAccesoService::ESTADO_EN_TRANSITO_SALIDA,
+            ])
+            ->whereDate('fecha_inicio', today())
+            ->with(['visitantes', 'estado', 'tipo', 'solicitudVisitantes.qr'])
             ->get()
-            ->filter(fn($s) => !$this->solicitudYaVencio($s))
+            ->filter(fn ($s) => !$this->solicitudYaVencio($s))
             ->values();
 
-        $data = $solicitudes->map(fn($s) => [
-            'id_solicitud'    => $s->id_solicitud,
-            'folio'           => $s->folio,
-            'fecha_inicio'    => $s->fecha_inicio,
-            'lugar_encuentro' => $s->lugar_encuentro,
-            'motivo_visita'   => $s->motivo_visita,
-            'estado'          => $s->estado->nombre ?? '',
-            'tipo'            => $s->tipo->nombre ?? '',
-            'visitantes'      => $s->visitantes->map(fn($v) => [
-                'nombre'          => $v->nombre,
-                'apellidos'       => $v->apellidos,
-                'correo_personal' => $v->correo_personal,
-            ]),
-        ]);
+        $data = $solicitudes->map(fn ($s) => $flujo->formatearVisitaActiva($s));
 
-        return response()->json(['message' => 'Visitas activas obtenidas correctamente.', 'data' => $data]);
+        return response()->json([
+            'message' => 'Visitas activas obtenidas correctamente.',
+            'data'    => $data,
+        ]);
+    }
+
+    public function confirmarLlegada($id)
+    {
+        $solicitud = Solicitud::where('id_solicitante', auth()->user()->idSam())
+            ->with('solicitudVisitantes.qr')
+            ->findOrFail($id);
+
+        $flujo    = new FlujoAccesoService();
+        $registro = $flujo->registroActivoPorQr(
+            (int) ($solicitud->solicitudVisitantes->first()?->qr?->id_qr ?? 0)
+        );
+
+        try {
+            $flujo->registrarLlegadaEncuentro($solicitud, $registro);
+        } catch (\InvalidArgumentException $e) {
+            return response()->json(['message' => $e->getMessage()], 422);
+        }
+
+        $solicitud->refresh();
+
+        return response()->json([
+            'message' => 'Llegada al encuentro registrada correctamente.',
+            'data'    => $flujo->formatearVisitaActiva($solicitud),
+        ]);
+    }
+
+    public function confirmarSalida($id)
+    {
+        $solicitud = Solicitud::where('id_solicitante', auth()->user()->idSam())
+            ->with('solicitudVisitantes.qr')
+            ->findOrFail($id);
+
+        $flujo    = new FlujoAccesoService();
+        $registro = $flujo->registroActivoPorQr(
+            (int) ($solicitud->solicitudVisitantes->first()?->qr?->id_qr ?? 0)
+        );
+
+        try {
+            $flujo->registrarSalidaEncuentro($solicitud, $registro);
+        } catch (\InvalidArgumentException $e) {
+            return response()->json(['message' => $e->getMessage()], 422);
+        }
+
+        $solicitud->refresh();
+
+        return response()->json([
+            'message' => 'Salida del encuentro registrada. Visitante en tránsito a salida.',
+            'data'    => $flujo->formatearVisitaActiva($solicitud),
+        ]);
     }
 
     public function pendientes(Request $request)

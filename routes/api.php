@@ -43,4 +43,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/autorizador/{id}/rechazar',    [SolicitudApiController::class, 'rechazar']);
 
     Route::get('/notificaciones', [AuthController::class, 'notificaciones']);
+
+    Route::get('/visitas/activas', [SolicitudApiController::class, 'activas']);
+    Route::post('/visitas/{id}/confirmar-llegada', [SolicitudApiController::class, 'confirmarLlegada']);
+    Route::post('/visitas/{id}/confirmar-salida', [SolicitudApiController::class, 'confirmarSalida']);
 });

@@ -24,6 +24,9 @@ class Solicitud extends Model
         'id_solicitante',
         'cancelado_por',
         'fecha_cancelacion',
+        'hora_llegada_encuentro',
+        'hora_salida_encuentro',
+        'reenvios_qr',
     ];
 
     // ─── Relaciones ──────────────────────────────────────────────

@@ -13,6 +13,7 @@ use App\Mail\EnviarQRMail;
 use App\Models\QR;
 use App\Models\RegistroAcceso;
 use App\Models\Solicitud;
+use App\Services\FlujoAccesoService;
 use App\Models\SolicitudVisitante;
 use App\Models\Visitante;
 use Illuminate\Http\JsonResponse;
@@ -25,6 +26,11 @@ use Illuminate\Support\Facades\Validator;
 
 class VigilanteApiController extends Controller
 {
+    private function flujoAcceso(): FlujoAccesoService
+    {
+        return new FlujoAccesoService();
+    }
+
     public function login(Request $request): JsonResponse
     {
         $validador = Validator::make($request->all(), [
@@ -249,6 +255,7 @@ class VigilanteApiController extends Controller
         }
 
         $solicitud = $qr->solicitudVisitante->solicitud;
+        $estadosAutocompletados = [];
 
         try {
             if ($accionDisponible === 'entrada') {
@@ -258,11 +265,8 @@ class VigilanteApiController extends Controller
                     $casetaEntrada
                 );
                 $qr->update(['id_estadoQr' => 2]);
+                $this->flujoAcceso()->marcarEnInstitucion($solicitud);
 
-                // Cambiar estado solicitud a "En Institución" (id=5)
-                $solicitud->update(['id_estado_solicitud' => 5]);
-
-                // Notificar al solicitante
                 \App\Models\Notificacion::create([
                     'id_empleado'  => $solicitud->id_solicitante,
                     'id_solicitud' => $solicitud->id_solicitud,
@@ -270,19 +274,24 @@ class VigilanteApiController extends Controller
                     'mensaje'      => "Tu visitante entró a la institución. Folio: {$solicitud->folio}",
                     'leida'        => false,
                 ]);
-
             } else {
+                $estadosAutocompletados = $this->flujoAcceso()->prepararSalidaVigilante(
+                    $solicitud,
+                    $registroActivo
+                );
+                $this->flujoAcceso()->logAutocompletado(
+                    $solicitud->id_solicitud,
+                    $estadosAutocompletados
+                );
+
                 RegistroAcceso::registrarSalidaInstitucional(
                     $registroActivo,
                     $telefonoSalida,
                     $casetaSalida
                 );
                 $qr->update(['id_estadoQr' => 3]);
+                $this->flujoAcceso()->marcarFinalizada($solicitud);
 
-                // Cambiar estado solicitud a "Finalizada" (id=8)
-                $solicitud->update(['id_estado_solicitud' => 8]);
-
-                // Notificar al solicitante
                 \App\Models\Notificacion::create([
                     'id_empleado'  => $solicitud->id_solicitante,
                     'id_solicitud' => $solicitud->id_solicitud,
@@ -291,6 +300,10 @@ class VigilanteApiController extends Controller
                     'leida'        => false,
                 ]);
             }
+        } catch (\InvalidArgumentException $e) {
+            return response()->json([
+                'data' => $this->respuestaRechazo($qr, $e->getMessage()),
+            ], 200);
         } catch (\Throwable $e) {
             Log::error('Error al registrar acceso en escanear', [
                 'id_qr'   => $qr->id_qr,
@@ -303,22 +316,28 @@ class VigilanteApiController extends Controller
         }
 
         $visitante = $qr->solicitudVisitante->visitante;
+        $solicitud->refresh();
+        $solicitud->load('estado');
 
         return response()->json([
             'data' => [
-                'id_qr'             => $qr->id_qr,
-                'acceso_concedido'  => true,
-                'accion_disponible' => $accionDisponible,
-                'motivo_rechazo'    => null,
-                'visitante'         => [
+                'id_qr'                  => $qr->id_qr,
+                'acceso_concedido'       => true,
+                'accion_disponible'      => $accionDisponible,
+                'motivo_rechazo'         => null,
+                'id_estado_solicitud'    => (int) $solicitud->id_estado_solicitud,
+                'estado_solicitud'       => $solicitud->estado->nombre ?? '',
+                'estados_autocompletados'=> $estadosAutocompletados,
+                'visitante'              => [
                     'nombre'          => $visitante->nombre,
                     'apellidos'       => $visitante->apellidos,
                     'correo_personal' => $visitante->correo_personal,
                 ],
-                'solicitud'         => [
+                'solicitud'              => [
                     'motivo_visita'   => $solicitud->motivo_visita,
                     'vigencia_inicio' => $qr->vigencia_inicio,
                     'vigencia_final'  => $qr->vigencia_final,
+                    'lugar_encuentro' => $solicitud->lugar_encuentro,
                 ],
             ],
         ], 200);
@@ -346,7 +365,7 @@ class VigilanteApiController extends Controller
                 'caseta_entrada'             => $caseta,
             ]);
 
-            $qr = QR::findOrFail($request->id_qr);
+            $qr = QR::with('solicitudVisitante.solicitud')->findOrFail($request->id_qr);
 
             $entradaActiva = RegistroAcceso::where('id_qr', $qr->id_qr)
                 ->whereNotNull('hora_llegada_institucion')
@@ -366,6 +385,11 @@ class VigilanteApiController extends Controller
             );
 
             $qr->update(['id_estadoQr' => 2]);
+
+            $solicitud = $qr->solicitudVisitante->solicitud ?? null;
+            if ($solicitud) {
+                $this->flujoAcceso()->marcarEnInstitucion($solicitud);
+            }
 
             return response()->json(['message' => 'Entrada registrada correctamente.']);
         } catch (\InvalidArgumentException $e) {
@@ -392,28 +416,41 @@ class VigilanteApiController extends Controller
             'area'     => 'required|string|min:1|max:100',
         ]);
 
-        $registro = RegistroAcceso::where('id_qr', $request->id_qr)
-            ->whereNull('hora_salida_institucion')
-            ->orderByDesc('id_registro')
-            ->first();
+        $qr = QR::with('solicitudVisitante.solicitud')->findOrFail($request->id_qr);
+
+        $registro = $this->flujoAcceso()->registroActivoPorQr($qr->id_qr);
 
         if (!$registro) {
             return response()->json(['message' => 'No se encontro entrada registrada para este QR.'], 404);
         }
 
+        $solicitud = $qr->solicitudVisitante->solicitud;
+
+        $autocompletados = [];
+
         try {
+            $autocompletados = $this->flujoAcceso()->prepararSalidaVigilante($solicitud, $registro);
+            $this->flujoAcceso()->logAutocompletado($solicitud->id_solicitud, $autocompletados);
+
             RegistroAcceso::registrarSalidaInstitucional(
                 $registro,
                 $this->resolverTelefonoVigilanteSalida($request),
                 $this->resolverCasetaSalida($request)
             );
+
+            $qr->update(['id_estadoQr' => 3]);
+            $this->flujoAcceso()->marcarFinalizada($solicitud);
         } catch (\InvalidArgumentException $e) {
             return response()->json(['message' => $e->getMessage()], 422);
         }
 
-        QR::where('id_qr', $request->id_qr)->update(['id_estadoQr' => 3]);
-
-        return response()->json(['message' => 'Salida registrada correctamente.']);
+        return response()->json([
+            'message' => 'Salida registrada correctamente.',
+            'data'    => [
+                'estados_autocompletados' => $autocompletados,
+                'id_estado_solicitud'     => FlujoAccesoService::ESTADO_FINALIZADA,
+            ],
+        ]);
     }
 
     public function historial(): JsonResponse
