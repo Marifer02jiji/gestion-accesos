@@ -10,6 +10,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Mail\EnviarQRMail;
+use App\Models\Evento;
 use App\Models\QR;
 use App\Models\RegistroAcceso;
 use App\Models\Solicitud;
@@ -79,13 +80,10 @@ class VigilanteApiController extends Controller
             ], 422);
         }
 
-        $lugaresPermitidos = [
-            'División de Comunicación y Difusión',
-            'Desarrollo Académico',
-        ];
-
-        if (!in_array($request->lugar_destino, $lugaresPermitidos, true)) {
-            return response()->json(['message' => 'El lugar destino no es valido.'], 422);
+        if (!$this->esLugarConsultaValido($request->lugar_destino)) {
+            return response()->json([
+                'message' => 'El lugar destino no es valido para consulta (Comunicación y Difusión o Desarrollo Académico).',
+            ], 422);
         }
 
         try {
@@ -120,8 +118,10 @@ class VigilanteApiController extends Controller
                     'id_solicitud' => $solicitud->id_solicitud,
                 ]);
 
+                $codigoQr = QR::generarCodigo();
+
                 $qr = QR::create([
-                    'codigo_numerico'        => $folio,
+                    'codigo_numerico'        => $codigoQr,
                     'vigencia_inicio'        => now(),
                     'vigencia_final'         => now()->addHours(2),
                     'prorroga_tolerancia'    => 0,
@@ -139,7 +139,7 @@ class VigilanteApiController extends Controller
 
                 return [
                     'folio'               => $solicitud->folio,
-                    'codigo_qr'           => $folio,
+                    'codigo_qr'           => $codigoQr,
                     'nombre_visitante'     => $visitante->nombre,
                     'apellidos_visitante'  => $visitante->apellidos,
                     'nombre_completo'      => trim($visitante->nombre . ' ' . $visitante->apellidos),
@@ -278,6 +278,18 @@ class VigilanteApiController extends Controller
             }
         }
 
+        if (!$qr->solicitudVisitante) {
+            return $this->escanearEvento(
+                $qr,
+                $accionDisponible,
+                $registroActivo,
+                $telefonoEntrada,
+                $casetaEntrada,
+                $telefonoSalida,
+                $casetaSalida
+            );
+        }
+
         $solicitud = $qr->solicitudVisitante->solicitud;
         $estadosAutocompletados = [];
 
@@ -291,13 +303,15 @@ class VigilanteApiController extends Controller
                 $qr->update(['id_estadoQr' => 2]);
                 $this->flujoAcceso()->marcarEnInstitucion($solicitud);
 
-                \App\Models\Notificacion::create([
-                    'id_empleado'  => $solicitud->id_solicitante,
-                    'id_solicitud' => $solicitud->id_solicitud,
-                    'tipo'         => 'entrada',
-                    'mensaje'      => "Tu visitante entró a la institución. Folio: {$solicitud->folio}",
-                    'leida'        => false,
-                ]);
+                if ((int) $solicitud->id_solicitante > 0) {
+                    \App\Models\Notificacion::create([
+                        'id_empleado'  => $solicitud->id_solicitante,
+                        'id_solicitud' => $solicitud->id_solicitud,
+                        'tipo'         => 'entrada',
+                        'mensaje'      => "Tu visitante entró a la institución. Folio: {$solicitud->folio}",
+                        'leida'        => false,
+                    ]);
+                }
             } else {
                 $estadosAutocompletados = $this->flujoAcceso()->prepararSalidaVigilante(
                     $solicitud,
@@ -316,13 +330,15 @@ class VigilanteApiController extends Controller
                 $qr->update(['id_estadoQr' => 3]);
                 $this->flujoAcceso()->marcarFinalizada($solicitud);
 
-                \App\Models\Notificacion::create([
-                    'id_empleado'  => $solicitud->id_solicitante,
-                    'id_solicitud' => $solicitud->id_solicitud,
-                    'tipo'         => 'salida',
-                    'mensaje'      => "Tu visitante salió de la institución. Folio: {$solicitud->folio}",
-                    'leida'        => false,
-                ]);
+                if ((int) $solicitud->id_solicitante > 0) {
+                    \App\Models\Notificacion::create([
+                        'id_empleado'  => $solicitud->id_solicitante,
+                        'id_solicitud' => $solicitud->id_solicitud,
+                        'tipo'         => 'salida',
+                        'mensaje'      => "Tu visitante salió de la institución. Folio: {$solicitud->folio}",
+                        'leida'        => false,
+                    ]);
+                }
             }
         } catch (\InvalidArgumentException $e) {
             return response()->json([
@@ -341,10 +357,13 @@ class VigilanteApiController extends Controller
 
         $visitante = $qr->solicitudVisitante->visitante;
         $solicitud->refresh();
-        $solicitud->load('estado');
+        $solicitud->load(['estado', 'tipo', 'solicitante']);
+
+        $solicitanteInfo = $this->datosSolicitanteParaRespuesta($solicitud);
 
         return response()->json([
             'data' => [
+                'tipo_acceso'            => (int) $solicitud->id_tipo_solicitud === 4 ? 'consulta' : 'normal',
                 'id_qr'                  => $qr->id_qr,
                 'acceso_concedido'       => true,
                 'accion_disponible'      => $accionDisponible,
@@ -357,11 +376,16 @@ class VigilanteApiController extends Controller
                     'apellidos'       => $visitante->apellidos,
                     'correo_personal' => $visitante->correo_personal,
                 ],
+                'solicitante'            => $solicitanteInfo,
                 'solicitud'              => [
-                    'motivo_visita'   => $solicitud->motivo_visita,
-                    'vigencia_inicio' => $qr->vigencia_inicio,
-                    'vigencia_final'  => $qr->vigencia_final,
-                    'lugar_encuentro' => $solicitud->lugar_encuentro,
+                    'folio'             => $solicitud->folio,
+                    'motivo_visita'     => $solicitud->motivo_visita,
+                    'vigencia_inicio'   => $qr->vigencia_inicio,
+                    'vigencia_final'    => $qr->vigencia_final,
+                    'lugar_encuentro'   => $solicitud->lugar_encuentro,
+                    'tolerancia_antes'  => (int) $solicitud->tolerancia_antes,
+                    'tolerancia_despues'=> (int) $solicitud->tolerancia_despues,
+                    'tipo_visita'       => $solicitud->tipo->nombre ?? '',
                 ],
             ],
         ], 200);
@@ -581,12 +605,181 @@ class VigilanteApiController extends Controller
         return $digitos;
     }
 
+    private function esLugarConsultaValido(string $lugar): bool
+    {
+        $lugar = trim($lugar);
+        $patrones = [
+            'comunicación y difusión',
+            'comunicacion y difusion',
+            'desarrollo académico',
+            'desarrollo academico',
+        ];
+
+        $lugarLower = mb_strtolower($lugar);
+
+        foreach ($patrones as $patron) {
+            if (str_contains($lugarLower, $patron)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private function datosSolicitanteParaRespuesta(?Solicitud $solicitud): array
+    {
+        if (!$solicitud || (int) $solicitud->id_solicitante <= 0) {
+            return [
+                'nombre'       => 'Registro vigilante',
+                'departamento' => '',
+                'usuario'      => '',
+            ];
+        }
+
+        $user = $solicitud->solicitante;
+        $nombre = $user->name ?? 'Sin nombre';
+
+        try {
+            $empleado = DB::connection('sam')
+                ->table('empleados')
+                ->where('id_empleado', $solicitud->id_solicitante)
+                ->first();
+
+            if ($empleado) {
+                $completo = trim(($empleado->nombre ?? '') . ' ' . ($empleado->apellidoPa ?? ''));
+                if ($completo !== '') {
+                    $nombre = $completo;
+                }
+            }
+        } catch (\Throwable $e) {
+            Log::warning('SAM solicitante escaneo: ' . $e->getMessage());
+        }
+
+        return [
+            'nombre'       => $nombre,
+            'departamento' => '',
+            'usuario'      => $user->name ?? '',
+        ];
+    }
+
+    private function escanearEvento(
+        QR $qr,
+        string $accionDisponible,
+        ?RegistroAcceso $registroActivo,
+        string $telefonoEntrada,
+        string $casetaEntrada,
+        string $telefonoSalida,
+        string $casetaSalida
+    ): JsonResponse {
+        $evento = Evento::where('id_qr', $qr->id_qr)->first();
+
+        if (!$evento) {
+            return response()->json([
+                'data' => $this->respuestaRechazo($qr, 'Codigo QR de evento no vinculado.'),
+            ], 200);
+        }
+
+        try {
+            if ($accionDisponible === 'entrada') {
+                RegistroAcceso::registrarEntradaInstitucional(
+                    $qr->id_qr,
+                    $telefonoEntrada,
+                    $casetaEntrada
+                );
+                $qr->update(['id_estadoQr' => 2]);
+            } else {
+                RegistroAcceso::registrarSalidaInstitucional(
+                    $registroActivo,
+                    $telefonoSalida,
+                    $casetaSalida
+                );
+                $qr->update(['id_estadoQr' => 3]);
+            }
+        } catch (\Throwable $e) {
+            Log::error('Error escaneo evento', ['id_qr' => $qr->id_qr, 'msg' => $e->getMessage()]);
+
+            return response()->json([
+                'data' => $this->respuestaRechazoEvento($qr, $evento, 'Error al registrar acceso del evento.'),
+            ], 200);
+        }
+
+        return response()->json([
+            'data' => [
+                'tipo_acceso'       => 'evento',
+                'id_qr'             => $qr->id_qr,
+                'acceso_concedido'  => true,
+                'accion_disponible' => $accionDisponible,
+                'motivo_rechazo'    => null,
+                'evento'            => [
+                    'folio'              => $evento->folio,
+                    'tipo_evento'        => $evento->tipo_evento,
+                    'descripcion'        => $evento->descripcion ?? '',
+                    'lugar'              => $evento->lugar,
+                    'fecha_evento'       => $evento->fecha_evento,
+                    'numero_personas'    => (int) $evento->numero_personas,
+                    'nombre_responsable' => $evento->nombre_responsable,
+                    'correo_responsable' => $evento->correo_responsable,
+                ],
+                'visitante'         => [
+                    'nombre'          => 'Grupo de evento',
+                    'apellidos'       => "({$evento->numero_personas} personas)",
+                    'correo_personal' => $evento->correo_responsable,
+                ],
+                'solicitud'         => [
+                    'folio'           => $evento->folio,
+                    'motivo_visita'   => trim($evento->tipo_evento . ($evento->descripcion ? ' — ' . $evento->descripcion : '')),
+                    'vigencia_inicio' => $qr->vigencia_inicio,
+                    'vigencia_final'  => $qr->vigencia_final,
+                    'lugar_encuentro' => $evento->lugar,
+                    'tipo_visita'     => 'Evento grupal',
+                ],
+            ],
+        ], 200);
+    }
+
+    private function respuestaRechazoEvento(QR $qr, Evento $evento, string $motivo): array
+    {
+        return [
+            'tipo_acceso'       => 'evento',
+            'id_qr'             => $qr->id_qr,
+            'acceso_concedido'  => false,
+            'accion_disponible' => 'entrada',
+            'motivo_rechazo'    => $motivo,
+            'evento'            => [
+                'folio'              => $evento->folio,
+                'tipo_evento'        => $evento->tipo_evento,
+                'nombre_responsable' => $evento->nombre_responsable,
+                'lugar'              => $evento->lugar,
+                'numero_personas'    => (int) $evento->numero_personas,
+            ],
+            'visitante'         => [
+                'nombre'          => 'Grupo de evento',
+                'apellidos'       => '',
+                'correo_personal' => $evento->correo_responsable,
+            ],
+            'solicitud'         => [
+                'motivo_visita'   => $evento->tipo_evento,
+                'vigencia_inicio' => $qr->vigencia_inicio,
+                'vigencia_final'  => $qr->vigencia_final,
+                'lugar_encuentro' => $evento->lugar,
+            ],
+        ];
+    }
+
     private function respuestaRechazo(?QR $qr, string $motivo): array
     {
         $visitante = $qr?->solicitudVisitante?->visitante;
         $solicitud = $qr?->solicitudVisitante?->solicitud;
 
+        if ($qr && !$qr->solicitudVisitante) {
+            $evento = Evento::where('id_qr', $qr->id_qr)->first();
+            if ($evento) {
+                return $this->respuestaRechazoEvento($qr, $evento, $motivo);
+            }
+        }
+
         return [
+            'tipo_acceso'       => $solicitud ? ((int) $solicitud->id_tipo_solicitud === 4 ? 'consulta' : 'normal') : 'desconocido',
             'id_qr'             => $qr?->id_qr ?? 0,
             'acceso_concedido'  => false,
             'accion_disponible' => 'entrada',
@@ -600,6 +793,7 @@ class VigilanteApiController extends Controller
                 'motivo_visita'   => $solicitud?->motivo_visita ?? '',
                 'vigencia_inicio' => $qr?->vigencia_inicio ?? '',
                 'vigencia_final'  => $qr?->vigencia_final ?? '',
+                'lugar_encuentro' => $solicitud?->lugar_encuentro ?? '',
             ],
         ];
     }

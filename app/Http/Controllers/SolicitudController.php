@@ -70,11 +70,11 @@ class SolicitudController extends Controller
         ]);
 
         foreach ($request->visitante_correo as $index => $correo) {
-            $visitante = Visitante::firstOrCreate(
+            $visitante = Visitante::updateOrCreate(
                 ['correo_personal' => $correo],
                 [
-                    'nombre'    => $request->visitante_nombre[$index],
-                    'apellidos' => $request->visitante_apellidos[$index],
+                    'nombre'    => trim($request->visitante_nombre[$index]),
+                    'apellidos' => trim($request->visitante_apellidos[$index]),
                 ]
             );
 

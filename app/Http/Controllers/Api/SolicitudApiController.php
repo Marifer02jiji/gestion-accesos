@@ -92,6 +92,30 @@ class SolicitudApiController extends Controller
         $solicitud->nombre_solicitante = $solicitud->solicitante->name
             ?? $solicitud->solicitante->nombre
             ?? 'Sin nombre';
+        $solicitud->usuario_solicitante = $solicitud->solicitante->name ?? '';
+
+        if ((int) $solicitud->id_solicitante > 0) {
+            try {
+                $empleado = DB::connection('sam')
+                    ->table('empleados')
+                    ->where('id_empleado', $solicitud->id_solicitante)
+                    ->first();
+
+                if ($empleado) {
+                    $nombreCompleto = trim(
+                        ($empleado->nombre ?? '') . ' ' . ($empleado->apellidoPa ?? '')
+                    );
+                    if ($nombreCompleto !== '') {
+                        $solicitud->nombre_solicitante = $nombreCompleto;
+                    }
+                    if (!empty($empleado->usuario)) {
+                        $solicitud->usuario_solicitante = $empleado->usuario;
+                    }
+                }
+            } catch (\Throwable $e) {
+                Log::warning('SAM no disponible para nombre solicitante: ' . $e->getMessage());
+            }
+        }
 
         $solicitud->correo_solicitante = $solicitud->solicitante->email ?? '';
 
@@ -224,9 +248,12 @@ class SolicitudApiController extends Controller
         ]);
 
         foreach ($request->visitantes as $v) {
-            $visitante = Visitante::firstOrCreate(
+            $visitante = Visitante::updateOrCreate(
                 ['correo_personal' => $v['correo']],
-                ['nombre' => $v['nombre'], 'apellidos' => $v['apellidos']]
+                [
+                    'nombre'    => trim($v['nombre']),
+                    'apellidos' => trim($v['apellidos']),
+                ]
             );
             SolicitudVisitante::create([
                 'id_solicitud' => $solicitud->id_solicitud,

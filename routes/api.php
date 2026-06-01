@@ -21,6 +21,7 @@ Route::post('/login', [AuthController::class, 'login']);
 
 // Vigilante: todas públicas, no existe en BD
 Route::post('/vigilante/login',      [VigilanteApiController::class, 'login']);
+Route::post('/vigilante/consulta',  [VigilanteApiController::class, 'registrarConsulta']);
 Route::get('/vigilante/visitas-hoy', [VigilanteApiController::class, 'visitasHoy']);
 Route::post('/vigilante/escanear',   [VigilanteApiController::class, 'escanear']);
 Route::post('/vigilante/entrada',    [VigilanteApiController::class, 'registrarEntrada']);
