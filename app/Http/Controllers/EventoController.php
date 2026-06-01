@@ -31,6 +31,8 @@ class EventoController extends Controller
             'tipo_evento'        => 'required|string',
             'descripcion'        => 'nullable|string',
             'lugar'              => 'required|string|max:100',
+            'tolerancia_antes'   => 'required|in:15,30',
+            'tolerancia_despues' => 'required|in:15,30',
             'fecha_evento'       => ['required', 'date', 'after:now', function($attribute, $value, $fail) {
                 $fecha = \Carbon\Carbon::parse($value);
                 $dia   = (int) $fecha->dayOfWeek;
@@ -57,15 +59,17 @@ class EventoController extends Controller
             'numero_personas'     => $request->numero_personas,
             'correo_responsable'  => $request->correo_responsable,
             'nombre_responsable'  => $request->nombre_responsable,
+            'tolerancia_antes'    => $request->tolerancia_antes,
+            'tolerancia_despues'  => $request->tolerancia_despues,
             'id_organizador'      => Auth::id(),
             'id_estado_solicitud' => 2,
         ]);
 
-        // Generar QR automáticamente
+        // Generar QR con tolerancia
         $qr = QR::create([
             'codigo_numerico'        => $evento->folio,
-            'vigencia_inicio'        => \Carbon\Carbon::parse($evento->fecha_evento)->subMinutes(30),
-            'vigencia_final'         => \Carbon\Carbon::parse($evento->fecha_evento)->addHours(4),
+            'vigencia_inicio'        => \Carbon\Carbon::parse($evento->fecha_evento)->subMinutes($request->tolerancia_antes),
+            'vigencia_final'         => \Carbon\Carbon::parse($evento->fecha_evento)->addMinutes($request->tolerancia_despues),
             'prorroga_tolerancia'    => false,
             'id_estadoQr'            => 1,
             'id_solicitud_visitante' => null,
@@ -73,7 +77,7 @@ class EventoController extends Controller
 
         $evento->update(['id_qr' => $qr->id_qr]);
 
-        // Enviar QR automáticamente al responsable
+        // Enviar QR automáticamente
         try {
             Mail::to($evento->correo_responsable)
                 ->send(new \App\Mail\EnviarQRMail($qr));

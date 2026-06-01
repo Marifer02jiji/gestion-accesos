@@ -23,6 +23,8 @@ class Evento extends Model
         'id_estado_solicitud',
         'id_qr',
         'fecha_creacion',
+        'tolerancia_antes',
+        'tolerancia_despues',
     ];
 
     public function qr()

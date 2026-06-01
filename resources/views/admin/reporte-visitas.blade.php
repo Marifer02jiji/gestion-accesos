@@ -64,8 +64,8 @@
             {{-- Tarjetas por visita --}}
             @forelse($solicitudes as $s)
             @php
-                $sv       = $s->solicitudVisitantes->first();
-                $qr       = $sv?->qr;
+                $sv        = $s->solicitudVisitantes->first();
+                $qr        = $sv?->qr;
                 $registros = $qr ? \App\Models\RegistroAcceso::where('id_qr', $qr->id_qr)
                     ->orderBy('hora_llegada_institucion', 'asc')
                     ->get() : collect();
@@ -91,7 +91,7 @@
                         </span>
                     </div>
                     <span class="text-xs text-gray-400">
-                        {{ \Carbon\Carbon::parse($s->fecha_inicio)->format('d/m/Y') }}
+                        {{ \Carbon\Carbon::parse($s->fecha_inicio)->format('d/m/Y H:i') }}
                     </span>
                 </div>
 
@@ -145,7 +145,6 @@
                     </p>
                     <div class="flex flex-wrap gap-3 items-center">
 
-                        {{-- Entrada institución --}}
                         @if($entrada)
                         <div class="flex items-center gap-2 bg-blue-50 border border-blue-200 rounded-lg px-3 py-2">
                             <i class="fas fa-sign-in-alt text-blue-500 text-sm"></i>
@@ -157,7 +156,6 @@
                         <i class="fas fa-chevron-right text-gray-300 text-xs"></i>
                         @endif
 
-                        {{-- Llegada al encuentro --}}
                         @if($s->hora_llegada_encuentro)
                         <div class="flex items-center gap-2 bg-purple-50 border border-purple-200 rounded-lg px-3 py-2">
                             <i class="fas fa-handshake text-purple-500 text-sm"></i>
@@ -169,7 +167,6 @@
                         <i class="fas fa-chevron-right text-gray-300 text-xs"></i>
                         @endif
 
-                        {{-- Salida del encuentro --}}
                         @if($s->hora_salida_encuentro)
                         <div class="flex items-center gap-2 bg-orange-50 border border-orange-200 rounded-lg px-3 py-2">
                             <i class="fas fa-door-open text-orange-500 text-sm"></i>
@@ -181,7 +178,6 @@
                         <i class="fas fa-chevron-right text-gray-300 text-xs"></i>
                         @endif
 
-                        {{-- Salida institución --}}
                         @if($salida)
                         <div class="flex items-center gap-2 bg-green-50 border border-green-200 rounded-lg px-3 py-2">
                             <i class="fas fa-sign-out-alt text-green-600 text-sm"></i>
@@ -196,6 +192,49 @@
                         <p class="text-xs text-gray-400">Sin registros de movimiento</p>
                         @endif
                     </div>
+
+                    {{-- Datos del vigilante --}}
+                    @if($registro && ($registro->telefono_vigilante_entrada || $registro->caseta_entrada))
+                    <div class="mt-3 flex gap-4 flex-wrap">
+                        @if($registro->telefono_vigilante_entrada)
+                        <div class="flex items-center gap-2 bg-gray-50 border border-gray-200 rounded-lg px-3 py-2">
+                            <i class="fas fa-phone text-gray-400 text-xs"></i>
+                            <div>
+                                <p class="text-xs font-semibold text-gray-600">Tel. Vigilante (entrada)</p>
+                                <p class="text-xs text-gray-500">{{ $registro->telefono_vigilante_entrada }}</p>
+                            </div>
+                        </div>
+                        @endif
+                        @if($registro->caseta_entrada)
+                        <div class="flex items-center gap-2 bg-gray-50 border border-gray-200 rounded-lg px-3 py-2">
+                            <i class="fas fa-map-marker-alt text-gray-400 text-xs"></i>
+                            <div>
+                                <p class="text-xs font-semibold text-gray-600">Área de acceso (entrada)</p>
+                                <p class="text-xs text-gray-500">{{ $registro->caseta_entrada }}</p>
+                            </div>
+                        </div>
+                        @endif
+                        @if($registro->telefono_vigilante_salida)
+                        <div class="flex items-center gap-2 bg-gray-50 border border-gray-200 rounded-lg px-3 py-2">
+                            <i class="fas fa-phone text-gray-400 text-xs"></i>
+                            <div>
+                                <p class="text-xs font-semibold text-gray-600">Tel. Vigilante (salida)</p>
+                                <p class="text-xs text-gray-500">{{ $registro->telefono_vigilante_salida }}</p>
+                            </div>
+                        </div>
+                        @endif
+                        @if($registro->caseta_salida)
+                        <div class="flex items-center gap-2 bg-gray-50 border border-gray-200 rounded-lg px-3 py-2">
+                            <i class="fas fa-map-marker-alt text-gray-400 text-xs"></i>
+                            <div>
+                                <p class="text-xs font-semibold text-gray-600">Área de acceso (salida)</p>
+                                <p class="text-xs text-gray-500">{{ $registro->caseta_salida }}</p>
+                            </div>
+                        </div>
+                        @endif
+                    </div>
+                    @endif
+
                 </div>
             </div>
             @empty

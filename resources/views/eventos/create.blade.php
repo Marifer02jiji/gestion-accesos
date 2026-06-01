@@ -59,6 +59,18 @@
                     @enderror
                 </div>
 
+                <div>
+                    <label class="block text-sm font-semibold text-omg-slate mb-1">
+                        <i class="fas fa-users mr-1"></i> Número de Personas
+                    </label>
+                    <input type="number" name="numero_personas" value="{{ old('numero_personas') }}"
+                        min="1" placeholder="Ej. 40"
+                        class="w-full border border-omg-kashmir rounded px-3 py-2 bg-omg-chardon focus:outline-none focus:ring-2 focus:ring-omg-nile">
+                    @error('numero_personas')
+                        <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
+                    @enderror
+                </div>
+
                 <div class="col-span-2">
                     <label class="block text-sm font-semibold text-omg-slate mb-1">
                         <i class="fas fa-file-alt mr-1"></i> Descripción
@@ -102,16 +114,29 @@
                     @enderror
                 </div>
 
-                <div>
-                    <label class="block text-sm font-semibold text-omg-slate mb-1">
-                        <i class="fas fa-users mr-1"></i> Número de Personas
+                {{-- Tolerancia --}}
+                <div class="col-span-2">
+                    <label class="block text-sm font-semibold text-omg-slate mb-2">
+                        <i class="fas fa-clock mr-1"></i> Tolerancia de llegada
                     </label>
-                    <input type="number" name="numero_personas" value="{{ old('numero_personas') }}"
-                        min="1" placeholder="Ej. 40"
-                        class="w-full border border-omg-kashmir rounded px-3 py-2 bg-omg-chardon focus:outline-none focus:ring-2 focus:ring-omg-nile">
-                    @error('numero_personas')
-                        <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
-                    @enderror
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs text-omg-kashmir mb-1">Antes (min)</label>
+                            <select name="tolerancia_antes"
+                                class="w-full border border-omg-kashmir rounded px-3 py-2 bg-omg-chardon focus:outline-none focus:ring-2 focus:ring-omg-coral">
+                                <option value="15" {{ old('tolerancia_antes', '15') == '15' ? 'selected' : '' }}>15 min</option>
+                                <option value="30" {{ old('tolerancia_antes') == '30' ? 'selected' : '' }}>30 min</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs text-omg-kashmir mb-1">Después (min)</label>
+                            <select name="tolerancia_despues"
+                                class="w-full border border-omg-kashmir rounded px-3 py-2 bg-omg-chardon focus:outline-none focus:ring-2 focus:ring-omg-coral">
+                                <option value="15" {{ old('tolerancia_despues', '15') == '15' ? 'selected' : '' }}>15 min</option>
+                                <option value="30" {{ old('tolerancia_despues') == '30' ? 'selected' : '' }}>30 min</option>
+                            </select>
+                        </div>
+                    </div>
                 </div>
 
                 <div>
@@ -170,7 +195,7 @@
             'Edificio D — Cubículos de Ingeniería Química',
             'Edificio D-1 — Laboratorio de Ingeniería Electrónica',
             'Edificio D-3 — Ingeniería Mecatrónica',
-            'Edificio F',
+            'Edificio F - Matemáticas Básicas',
             'Edificio G — Sindicato',
             'Edificio G — Laboratorio de Análisis',
             'Edificio H — Cafetería',
