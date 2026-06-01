@@ -136,11 +136,45 @@ class FlujoAccesoService
 
     public function registroActivoPorQr(int $idQr): ?RegistroAcceso
     {
+        if ($idQr <= 0) {
+            return null;
+        }
+
         return RegistroAcceso::where('id_qr', $idQr)
             ->whereNotNull('hora_llegada_institucion')
             ->whereNull('hora_salida_institucion')
             ->orderByDesc('id_registro')
             ->first();
+    }
+
+    /**
+     * Registro de entrada al campus aún abierto (sin salida institucional).
+     */
+    public function registroEntradaActivoParaSolicitud(Solicitud $solicitud): ?RegistroAcceso
+    {
+        $solicitud->loadMissing('solicitudVisitantes.qr');
+
+        $mejor = null;
+
+        foreach ($solicitud->solicitudVisitantes as $sv) {
+            if (!$sv->qr) {
+                continue;
+            }
+
+            $candidato = $this->registroActivoPorQr((int) $sv->qr->id_qr);
+            if (!$candidato) {
+                continue;
+            }
+
+            if (
+                !$mejor
+                || $candidato->hora_llegada_institucion > $mejor->hora_llegada_institucion
+            ) {
+                $mejor = $candidato;
+            }
+        }
+
+        return $mejor;
     }
 
     public function formatearVisitaActiva(Solicitud $solicitud): array
@@ -152,18 +186,17 @@ class FlujoAccesoService
             ? trim($visitante->nombre . ' ' . $visitante->apellidos)
             : 'Visitante';
 
-        $registro = null;
-        foreach ($solicitud->solicitudVisitantes as $sv) {
-            if (!$sv->qr) {
-                continue;
-            }
-            $candidato = RegistroAcceso::where('id_qr', $sv->qr->id_qr)
-                ->orderByDesc('id_registro')
-                ->first();
-            if ($candidato) {
-                $registro = $candidato;
-                break;
-            }
+        $registro = $this->registroEntradaActivoParaSolicitud($solicitud);
+
+        $idEstado     = (int) $solicitud->id_estado_solicitud;
+        $nombreEstado = trim($solicitud->estado->nombre ?? '');
+
+        $entradaCampus = $registro?->hora_llegada_institucion !== null
+            || $idEstado >= self::ESTADO_EN_INSTITUCION;
+
+        if ($entradaCampus && $idEstado < self::ESTADO_EN_INSTITUCION) {
+            $idEstado     = self::ESTADO_EN_INSTITUCION;
+            $nombreEstado = 'En Institución';
         }
 
         return [
@@ -171,8 +204,8 @@ class FlujoAccesoService
             'folio'                     => $solicitud->folio,
             'nombre_visitante'          => $nombre,
             'lugar_destino'             => $solicitud->lugar_encuentro,
-            'estado'                    => $solicitud->estado->nombre ?? '',
-            'id_estado_solicitud'       => (int) $solicitud->id_estado_solicitud,
+            'estado'                    => $nombreEstado,
+            'id_estado_solicitud'       => $idEstado,
             'hora_llegada_campus'       => $registro?->hora_llegada_institucion,
             'hora_llegada_area'         => $solicitud->hora_llegada_encuentro
                 ?? $registro?->hora_llegada_encuentro,

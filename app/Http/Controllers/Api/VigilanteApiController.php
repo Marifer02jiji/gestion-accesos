@@ -64,6 +64,14 @@ class VigilanteApiController extends Controller
         ]);
     }
 
+    /**
+     * Alias de ruta POST /api/vigilante/consulta (visita espontánea).
+     */
+    public function consulta(Request $request): JsonResponse
+    {
+        return $this->registrarConsulta($request);
+    }
+
     public function registrarConsulta(Request $request): JsonResponse
     {
         $validador = Validator::make($request->all(), [

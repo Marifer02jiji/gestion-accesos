@@ -471,9 +471,14 @@ class SolicitudApiController extends Controller
             ->findOrFail($id);
 
         $flujo    = new FlujoAccesoService();
-        $registro = $flujo->registroActivoPorQr(
-            (int) ($solicitud->solicitudVisitantes->first()?->qr?->id_qr ?? 0)
-        );
+        $registro = $flujo->registroEntradaActivoParaSolicitud($solicitud);
+
+        if (
+            $registro?->hora_llegada_institucion
+            && (int) $solicitud->id_estado_solicitud < FlujoAccesoService::ESTADO_EN_INSTITUCION
+        ) {
+            $flujo->marcarEnInstitucion($solicitud);
+        }
 
         try {
             $flujo->registrarLlegadaEncuentro($solicitud, $registro);
@@ -496,9 +501,7 @@ class SolicitudApiController extends Controller
             ->findOrFail($id);
 
         $flujo    = new FlujoAccesoService();
-        $registro = $flujo->registroActivoPorQr(
-            (int) ($solicitud->solicitudVisitantes->first()?->qr?->id_qr ?? 0)
-        );
+        $registro = $flujo->registroEntradaActivoParaSolicitud($solicitud);
 
         try {
             $flujo->registrarSalidaEncuentro($solicitud, $registro);
