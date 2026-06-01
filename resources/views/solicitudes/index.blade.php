@@ -80,7 +80,7 @@
                             <div class="flex gap-2 flex-wrap">
                                 <a href="{{ route('solicitudes.show', $s->id_solicitud) }}"
                                    class="text-white px-3 py-1 rounded hover:opacity-90 text-xs flex items-center gap-1"
-                                   style="background-color: #DA7E2D;">
+                                   style="background-color: #3B5675;">
                                     <i class="fas fa-eye"></i> Ver
                                 </a>
 
@@ -90,7 +90,7 @@
                                         @csrf
                                         <button type="submit"
                                             class="text-white px-3 py-1 rounded hover:opacity-90 text-xs flex items-center gap-1"
-                                            style="background-color: #3B5675;">
+                                            style="background-color: #16a34a;">
                                             <i class="fas fa-map-marker-alt"></i> Llegada Encuentro
                                         </button>
                                     </form>
@@ -99,7 +99,7 @@
                                         @csrf
                                         <button type="submit"
                                             class="text-white px-3 py-1 rounded hover:opacity-90 text-xs flex items-center gap-1"
-                                            style="background-color: #E26A23;">
+                                            style="background-color: #16a34a;">
                                             <i class="fas fa-sign-out-alt"></i> Salida Encuentro
                                         </button>
                                     </form>
