@@ -84,7 +84,6 @@ class SolicitudController extends Controller
             ]);
         }
 
-        // Notificar a todos los autorizadores
         $this->notificarAutorizadores($solicitud);
 
         return redirect()->route('solicitudes.index')
@@ -101,15 +100,17 @@ class SolicitudController extends Controller
 
     public function cancelar($id)
     {
-        $solicitud = Solicitud::with('solicitudVisitantes.qr')->findOrFail($id);
+        $solicitud = Solicitud::with(['solicitudVisitantes.qr', 'solicitudVisitantes.visitante'])
+            ->findOrFail($id);
 
         if (!$solicitud->esCancelable()) {
             return redirect()->route('solicitudes.index')
                 ->with('error', 'Esta solicitud no puede cancelarse en su estado actual.');
         }
 
+        // Cancelar QRs
         foreach ($solicitud->solicitudVisitantes as $sv) {
-            if ($sv->qr && $sv->qr->id_estadoQr === 1) {
+            if ($sv->qr && in_array($sv->qr->id_estadoQr, [1, 2])) {
                 $sv->qr->update(['id_estadoQr' => 4]);
             }
         }
@@ -120,8 +121,24 @@ class SolicitudController extends Controller
             'fecha_cancelacion'   => now(),
         ]);
 
+        // Enviar correo a cada visitante
+        $anfitrion = Auth::user()->name ?? 'el anfitrión';
+        foreach ($solicitud->solicitudVisitantes as $sv) {
+            $correo = $sv->visitante->correo_personal ?? null;
+            if (!$correo) continue;
+            try {
+                Mail::to($correo)->send(new \App\Mail\SolicitudCanceladaMail(
+                    $sv->visitante,
+                    $solicitud,
+                    $anfitrion
+                ));
+            } catch (\Throwable $e) {
+                Log::error('Error enviando correo cancelacion: ' . $e->getMessage());
+            }
+        }
+
         return redirect()->route('solicitudes.index')
-            ->with('success', 'Solicitud cancelada correctamente.');
+            ->with('success', 'Solicitud cancelada correctamente. Se notificó a los visitantes.');
     }
 
     public function enviarQR($id)
@@ -236,7 +253,7 @@ class SolicitudController extends Controller
         }
 
         $solicitud->update([
-            'id_estado_solicitud'  => 7,
+            'id_estado_solicitud'   => 7,
             'hora_salida_encuentro' => now(),
         ]);
 

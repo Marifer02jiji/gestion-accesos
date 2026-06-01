@@ -68,8 +68,8 @@ class EventoController extends Controller
         // Generar QR con tolerancia
         $qr = QR::create([
             'codigo_numerico'        => $evento->folio,
-            'vigencia_inicio'        => \Carbon\Carbon::parse($evento->fecha_evento)->subMinutes($request->tolerancia_antes),
-            'vigencia_final'         => \Carbon\Carbon::parse($evento->fecha_evento)->addMinutes($request->tolerancia_despues),
+            'vigencia_inicio'        => \Carbon\Carbon::parse($evento->fecha_evento)->subMinutes((int) $request->tolerancia_antes),
+            'vigencia_final'         => \Carbon\Carbon::parse($evento->fecha_evento)->addMinutes((int) $request->tolerancia_despues),           
             'prorroga_tolerancia'    => false,
             'id_estadoQr'            => 1,
             'id_solicitud_visitante' => null,
