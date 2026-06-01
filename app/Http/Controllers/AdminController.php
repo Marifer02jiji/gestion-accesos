@@ -71,10 +71,7 @@ class AdminController extends Controller
         return view('admin.visitantes-activos', compact('visitantes'));
     }
 
-
-
-        
-        public function registrarSalida(Request $request)
+    public function registrarSalida(Request $request)
     {
         $request->validate(['id_qr' => 'required|integer']);
 
@@ -88,13 +85,15 @@ class AdminController extends Controller
                 ->with('error', 'No se encontró entrada registrada.');
         }
 
+        // ── FIX: nombres de columna corregidos ───────────────────────────────
         $registro->update([
-            'hora_salida_institucion' => now(),
-            'telefono_vigilante'      => '0000000000',
-            'area_vigilante'          => 'Admin — Salida forzada',
+            'hora_salida_institucion'   => now(),
+            'telefono_vigilante_salida' => '0000000000',
+            'caseta_salida'             => 'Admin — Salida forzada',
         ]);
 
-        \App\Models\QR::where('id_qr', $request->id_qr)->update(['id_estadoQr' => 3]);
+        \App\Models\QR::where('id_qr', $request->id_qr)
+            ->update(['id_estadoQr' => 3]);
 
         return redirect()->route('admin.visitantes-activos')
             ->with('success', 'Salida registrada correctamente.');
@@ -110,10 +109,10 @@ class AdminController extends Controller
             ->orderBy('fecha_bloqueo', 'desc');
 
         if ($buscar) {
-            $query->whereHas('visitante', function($q) use ($buscar) {
+            $query->whereHas('visitante', function ($q) use ($buscar) {
                 $q->where('nombre', 'like', "%{$buscar}%")
-                ->orWhere('apellidos', 'like', "%{$buscar}%")
-                ->orWhere('correo_personal', 'like', "%{$buscar}%");
+                  ->orWhere('apellidos', 'like', "%{$buscar}%")
+                  ->orWhere('correo_personal', 'like', "%{$buscar}%");
             })->orWhere('motivo_exclusion', 'like', "%{$buscar}%");
         }
 
@@ -127,13 +126,15 @@ class AdminController extends Controller
 
         $exclusiones = $query->paginate(10)->withQueryString();
 
-        $visitantes = Visitante::whereNotIn('id_visitante',
+        $visitantes = Visitante::whereNotIn(
+            'id_visitante',
             ListaExclusion::pluck('id_visitante')
         )->get();
 
-        return view('admin.exclusiones', compact('exclusiones', 'visitantes', 'buscar', 'desde', 'hasta'));
+        return view('admin.exclusiones', compact(
+            'exclusiones', 'visitantes', 'buscar', 'desde', 'hasta'
+        ));
     }
-
 
     public function reporteVisitas(Request $request)
     {
@@ -150,15 +151,15 @@ class AdminController extends Controller
         ])->where('id_estado_solicitud', 8); // Solo finalizadas
 
         if ($buscar) {
-            $query->where(function($q) use ($buscar) {
+            $query->where(function ($q) use ($buscar) {
                 $q->where('folio', 'like', "%{$buscar}%")
-                ->orWhereHas('visitantes', fn($qv) =>
-                    $qv->where('nombre', 'like', "%{$buscar}%")
-                        ->orWhere('apellidos', 'like', "%{$buscar}%")
-                )
-                ->orWhereHas('solicitante', fn($qs) =>
-                    $qs->where('name', 'like', "%{$buscar}%")
-                );
+                  ->orWhereHas('visitantes', fn($qv) =>
+                      $qv->where('nombre', 'like', "%{$buscar}%")
+                         ->orWhere('apellidos', 'like', "%{$buscar}%")
+                  )
+                  ->orWhereHas('solicitante', fn($qs) =>
+                      $qs->where('name', 'like', "%{$buscar}%")
+                  );
             });
         }
 
@@ -170,11 +171,13 @@ class AdminController extends Controller
             $query->whereDate('fecha_inicio', '<=', $hasta);
         }
 
-        $solicitudes = $query->orderBy('fecha_inicio', 'desc')->paginate(15)->withQueryString();
+        $solicitudes = $query
+            ->orderBy('fecha_inicio', 'desc')
+            ->paginate(15)
+            ->withQueryString();
 
-        return view('admin.reporte-visitas', compact('solicitudes', 'buscar', 'desde', 'hasta'));
+        return view('admin.reporte-visitas', compact(
+            'solicitudes', 'buscar', 'desde', 'hasta'
+        ));
     }
-
-
-
 }
