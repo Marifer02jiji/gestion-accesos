@@ -73,7 +73,10 @@
                                 @elseif($s->estado->nombre == 'Finalizada') bg-green-700
                                 @elseif($s->estado->nombre == 'Cancelada') bg-gray-500
                                 @else bg-red-500 @endif">
-                                {{ $s->estado->nombre }}
+                                @if($s->estado->nombre == 'En Transito a Salida') En Tránsito
+                                @elseif($s->estado->nombre == 'En Institucion') En Institución
+                                @else {{ $s->estado->nombre }}
+                                @endif
                             </span>
                         </td>
                         <td class="px-4 py-2">

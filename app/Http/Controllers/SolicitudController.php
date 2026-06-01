@@ -42,6 +42,7 @@ class SolicitudController extends Controller
     {
         $solicitudes = Solicitud::where('id_solicitante', $this->idEmpleado())
             ->with(['estado', 'tipo', 'visitantes'])
+            ->orderByRaw("CASE WHEN id_estado_solicitud IN (1,2,5,6,7) THEN 0 ELSE 1 END")
             ->orderBy('fecha_inicio', 'asc')
             ->paginate(10);
 
