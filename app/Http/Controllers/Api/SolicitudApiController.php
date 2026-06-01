@@ -89,6 +89,19 @@ class SolicitudApiController extends Controller
 
     private function formatearSolicitudParaMovil($solicitud)
     {
+        $solicitud->loadMissing(['visitantes', 'estado', 'tipo', 'solicitudVisitantes.qr']);
+
+        $flujo  = new FlujoAccesoService();
+        $visita = $flujo->formatearVisitaActiva($solicitud);
+
+        $solicitud->id_estado_solicitud   = $visita['id_estado_solicitud'];
+        $solicitud->estado_nombre         = $visita['estado'];
+        $solicitud->hora_llegada_campus   = $visita['hora_llegada_campus'];
+        $solicitud->hora_llegada_encuentro = $visita['hora_llegada_area'];
+        $solicitud->hora_salida_encuentro  = $visita['hora_salida_area'];
+        $solicitud->hora_salida_campus    = $visita['hora_salida_campus'];
+        $solicitud->fecha_encuentro       = $solicitud->fecha_inicio;
+
         $solicitud->nombre_solicitante = $solicitud->solicitante->name
             ?? $solicitud->solicitante->nombre
             ?? 'Sin nombre';
@@ -453,10 +466,25 @@ class SolicitudApiController extends Controller
             ->whereDate('fecha_inicio', today())
             ->with(['visitantes', 'estado', 'tipo', 'solicitudVisitantes.qr'])
             ->get()
-            ->filter(fn ($s) => !$this->solicitudYaVencio($s))
+            ->filter(function ($s) use ($flujo) {
+                if ($flujo->registroEntradaActivoParaSolicitud($s)) {
+                    return true;
+                }
+
+                return ! $this->solicitudYaVencio($s);
+            })
             ->values();
 
-        $data = $solicitudes->map(fn ($s) => $flujo->formatearVisitaActiva($s));
+        $data = $solicitudes->map(function ($s) use ($flujo) {
+            if (
+                $flujo->registroEntradaActivoParaSolicitud($s)
+                && (int) $s->id_estado_solicitud < FlujoAccesoService::ESTADO_EN_INSTITUCION
+            ) {
+                $flujo->marcarEnInstitucion($s);
+            }
+
+            return $flujo->formatearVisitaActiva($s);
+        });
 
         return response()->json([
             'message' => 'Visitas activas obtenidas correctamente.',
@@ -502,6 +530,18 @@ class SolicitudApiController extends Controller
 
         $flujo    = new FlujoAccesoService();
         $registro = $flujo->registroEntradaActivoParaSolicitud($solicitud);
+
+        if (
+            (int) $solicitud->id_estado_solicitud < FlujoAccesoService::ESTADO_EN_ENCUENTRO
+            && ($solicitud->hora_llegada_encuentro || $registro?->hora_llegada_encuentro)
+        ) {
+            if ((int) $solicitud->id_estado_solicitud < FlujoAccesoService::ESTADO_EN_INSTITUCION) {
+                $flujo->marcarEnInstitucion($solicitud);
+            }
+            if ((int) $solicitud->id_estado_solicitud < FlujoAccesoService::ESTADO_EN_ENCUENTRO) {
+                $flujo->registrarLlegadaEncuentro($solicitud, $registro);
+            }
+        }
 
         try {
             $flujo->registrarSalidaEncuentro($solicitud, $registro);

@@ -615,15 +615,22 @@ class VigilanteApiController extends Controller
 
     private function esLugarConsultaValido(string $lugar): bool
     {
-        $lugar = trim($lugar);
+        $lugarLower = mb_strtolower(trim($lugar));
+
+        if ($lugarLower === '') {
+            return false;
+        }
+
         $patrones = [
             'comunicación y difusión',
             'comunicacion y difusion',
+            'centro de información',
+            'centro de informacion',
             'desarrollo académico',
             'desarrollo academico',
+            'edificio c-2',
+            'edificio b',
         ];
-
-        $lugarLower = mb_strtolower($lugar);
 
         foreach ($patrones as $patron) {
             if (str_contains($lugarLower, $patron)) {

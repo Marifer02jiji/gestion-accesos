@@ -199,18 +199,32 @@ class FlujoAccesoService
             $nombreEstado = 'En Institución';
         }
 
+        $horaLlegadaArea = $solicitud->hora_llegada_encuentro
+            ?? $registro?->hora_llegada_encuentro;
+        $horaSalidaArea = $solicitud->hora_salida_encuentro
+            ?? $registro?->hora_salida_encuentro;
+
+        if ($horaLlegadaArea && $idEstado < self::ESTADO_EN_ENCUENTRO) {
+            $idEstado     = self::ESTADO_EN_ENCUENTRO;
+            $nombreEstado = 'En Encuentro';
+        }
+
+        if ($horaSalidaArea && $idEstado < self::ESTADO_EN_TRANSITO_SALIDA) {
+            $idEstado     = self::ESTADO_EN_TRANSITO_SALIDA;
+            $nombreEstado = 'En Tránsito a Salida';
+        }
+
         return [
             'id_solicitud'              => $solicitud->id_solicitud,
             'folio'                     => $solicitud->folio,
             'nombre_visitante'          => $nombre,
             'lugar_destino'             => $solicitud->lugar_encuentro,
+            'fecha_encuentro'           => $solicitud->fecha_inicio,
             'estado'                    => $nombreEstado,
             'id_estado_solicitud'       => $idEstado,
             'hora_llegada_campus'       => $registro?->hora_llegada_institucion,
-            'hora_llegada_area'         => $solicitud->hora_llegada_encuentro
-                ?? $registro?->hora_llegada_encuentro,
-            'hora_salida_area'          => $solicitud->hora_salida_encuentro
-                ?? $registro?->hora_salida_encuentro,
+            'hora_llegada_area'         => $horaLlegadaArea,
+            'hora_salida_area'          => $horaSalidaArea,
             'hora_salida_campus'        => $registro?->hora_salida_institucion,
             'tiempo_permanencia_minutos'=> null,
         ];
