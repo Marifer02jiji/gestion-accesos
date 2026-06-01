@@ -49,7 +49,9 @@
                 <p class="text-sm text-omg-kashmir font-semibold flex items-center gap-1">
                     <i class="fas fa-calendar"></i> Fecha de Visita
                 </p>
-                <p class="font-semibold text-omg-slate">{{ $solicitud->fecha_inicio }}</p>
+                <p class="font-semibold text-omg-slate">
+                    {{ \Carbon\Carbon::parse($solicitud->fecha_inicio)->format('d/m/Y H:i') }}
+                </p>
             </div>
             <div>
                 <p class="text-sm text-omg-kashmir font-semibold flex items-center gap-1">
@@ -73,10 +75,11 @@
                 <p class="text-sm text-omg-kashmir font-semibold flex items-center gap-1">
                     <i class="fas fa-clock"></i> Tolerancia
                 </p>
-                <p class="font-semibold text-omg-slate">{{ $solicitud->tolerancia_antes }} min antes / {{ $solicitud->tolerancia_despues }} min después</p>
+                <p class="font-semibold text-omg-slate">
+                    {{ $solicitud->tolerancia_antes }} min antes / {{ $solicitud->tolerancia_despues }} min después
+                </p>
             </div>
 
-            {{-- Tiempos de encuentro --}}
             @if($solicitud->hora_llegada_encuentro)
             <div>
                 <p class="text-sm text-omg-kashmir font-semibold flex items-center gap-1">
@@ -134,10 +137,10 @@
                 <i class="fas fa-arrow-left"></i> Regresar
             </a>
 
-            {{-- Cancelar solicitud --}}
-            @if($solicitud->estado->nombre == 'Pendiente')
+            {{-- Cancelar solicitud — Pendiente o Autorizada --}}
+            @if(in_array($solicitud->estado->nombre, ['Pendiente', 'Autorizada']))
                 <form action="{{ route('solicitudes.cancelar', $solicitud->id_solicitud) }}" method="POST"
-                    onsubmit="return confirm('¿Desea cancelar esta solicitud?')">
+                    onsubmit="return confirm('¿Desea cancelar esta solicitud? Se notificará al visitante por correo.')">
                     @csrf
                     <button type="submit"
                         class="bg-red-600 text-white px-4 py-2 rounded hover:opacity-90 font-heading font-semibold flex items-center gap-2">
@@ -165,7 +168,7 @@
                     @csrf
                     <button type="submit"
                         class="text-white px-4 py-2 rounded-lg hover:opacity-90 font-heading font-semibold flex items-center gap-2"
-                        style="background-color: #DA7E2D;">
+                        style="background-color: #16a34a;">
                         <i class="fas fa-map-marker-alt"></i> Registrar Llegada a Encuentro
                     </button>
                 </form>
@@ -174,7 +177,7 @@
                     @csrf
                     <button type="submit"
                         class="text-white px-4 py-2 rounded-lg hover:opacity-90 font-heading font-semibold flex items-center gap-2"
-                        style="background-color: #E26A23;">
+                        style="background-color: #15803d;">
                         <i class="fas fa-sign-out-alt"></i> Registrar Salida de Encuentro
                     </button>
                 </form>
