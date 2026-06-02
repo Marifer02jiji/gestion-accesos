@@ -11,11 +11,6 @@
                     <i class="fas fa-chart-line"></i> Visitas Finalizadas
                 </h3>
                 <div class="flex gap-2">
-                    <a href="{{ route('admin.citas-consulta') }}"
-                    class="text-white px-4 py-2 rounded hover:opacity-90 font-heading font-semibold flex items-center gap-2 text-sm"
-                    style="background-color: #da8f2d;">
-                        Ver Citas Consulta
-                    </a>
                     <a href="{{ route('admin.reportes') }}"
                        class="text-white px-4 py-2 rounded hover:opacity-90 font-heading font-semibold flex items-center gap-2 text-sm"
                        style="background-color: #3B5675;">

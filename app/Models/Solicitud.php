@@ -129,6 +129,13 @@ class Solicitud extends Model
             });
         }
 
+        if (!empty($filtros['correo'])) {
+            $term = $filtros['correo'];
+            $query->whereHas('visitantes', function ($v) use ($term) {
+                $v->where('correo_personal', 'like', '%' . $term . '%');
+            });
+        }
+
         if (!empty($filtros['autorizador'])) {
             $term = $filtros['autorizador'];
             $query->whereHas('autorizador', function ($q) use ($term) {

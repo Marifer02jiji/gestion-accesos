@@ -16,8 +16,9 @@ class ReporteSolicitudController extends Controller
         $filtros = [
             'estado'      => $request->get('estado'),
             'solicitante' => $request->get('solicitante'),
+            'correo'      => $request->get('correo'),
             'autorizador' => $esAdmin ? $request->get('autorizador') : null,
-            'fecha'       => $esAdmin ? $request->get('fecha') : null,
+            'fecha'       => $request->get('fecha'),
             'hora'        => $esAdmin ? $request->get('hora') : null,
             'tipo'        => $request->get('tipo'),
             'desde'       => $request->get('desde'),

@@ -50,12 +50,12 @@
                     <a href="{{ route('admin.reporte-visitas') }}"
                        class="text-white px-4 py-2 rounded hover:opacity-90 font-heading font-semibold flex items-center gap-2 text-sm"
                        style="background-color: #3B5675;">
-                        <i class="fas fa-chart-line"></i> Reporte de Visitas
+                        <i class="fas fa-chart-line"></i> Visitas Finalizadas
                     </a>
-                    <a href="{{ route('admin.visitantes-activos') }}"
+                    <a href="{{ route('admin.citas-consulta') }}"
                        class="text-white px-4 py-2 rounded hover:opacity-90 font-heading font-semibold flex items-center gap-2 text-sm"
-                       style="background-color: #DA7E2D;">
-                        <i class="fas fa-user-check"></i> Ver Visitantes Activos
+                       style="background-color: #9ABBC9;">
+                        <i class="fas fa-calendar-check"></i> Ver Citas Consulta
                     </a>
                 </div>
             </div>

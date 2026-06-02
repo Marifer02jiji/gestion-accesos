@@ -11,6 +11,7 @@
     $salida    = $registro?->hora_salida_institucion ? \Carbon\Carbon::parse($registro->hora_salida_institucion) : null;
     $duracion  = ($entrada && $salida) ? $entrada->diff($salida) : null;
     $estadoNombre = $s->estado->nombre ?? '';
+    $tieneMovimiento = $entrada || $s->hora_llegada_encuentro || $s->hora_salida_encuentro || $salida;
 @endphp
 
 <div class="border rounded-xl p-5 mb-4" style="border-color: #A9AAAD;">
@@ -79,6 +80,7 @@
         </div>
     </div>
 
+    @if($tieneMovimiento)
     <div class="border-t pt-3" style="border-color: #f0d8c8;">
         <p class="text-xs font-semibold mb-3" style="color: #A9AAAD;">
             <i class="fas fa-route mr-1"></i> Timeline de la visita
@@ -174,4 +176,5 @@
         </div>
         @endif
     </div>
+    @endif
 </div>
