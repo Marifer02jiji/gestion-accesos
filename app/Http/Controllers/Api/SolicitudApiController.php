@@ -553,19 +553,17 @@ class SolicitudApiController extends Controller
     {
         $this->cancelarPendientesVencidas();
 
-        $filtro = strtolower($request->get('filtro', 'pendientes'));
-        $query  = Solicitud::with(['estado', 'tipo', 'visitantes', 'solicitante']);
+        $query = Solicitud::with(['estado', 'tipo', 'visitantes', 'solicitante']);
         $this->aplicarFiltroSolicitantesAutorizador($query);
+        $query->where('id_estado_solicitud', 1);
+        $query->filtrarPendientesAutorizador([
+            'solicitante' => $request->get('solicitante'),
+            'correo'      => $request->get('correo'),
+            'fecha'       => $request->get('fecha'),
+            'hora'        => $request->get('hora'),
+        ]);
 
-        match ($filtro) {
-            'autorizadas', 'aprobadas' => $query->where('id_estado_solicitud', 2),
-            'rechazadas'               => $query->where('id_estado_solicitud', 3),
-            'canceladas'               => $query->where('id_estado_solicitud', 4),
-            'todas', 'todos'           => null,
-            default                    => $query->where('id_estado_solicitud', 1),
-        };
-
-        $solicitudes = $query->orderBy('fecha_creacion', 'desc')->paginate(10);
+        $solicitudes = $query->orderBy('fecha_inicio', 'asc')->paginate(10);
         $solicitudes->getCollection()->transform(fn($s) => $this->formatearSolicitudParaMovil($s));
 
         return response()->json(['message' => 'Solicitudes obtenidas correctamente.', 'data' => $solicitudes]);

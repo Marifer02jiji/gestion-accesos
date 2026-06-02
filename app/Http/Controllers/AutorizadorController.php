@@ -47,21 +47,27 @@ class AutorizadorController extends Controller
 
     public function index(Request $request)
     {
-        $filtro = $request->get('filtro', 'pendientes');
+        $solicitante = $request->get('solicitante');
+        $correo      = $request->get('correo');
+        $fecha       = $request->get('fecha');
+        $hora        = $request->get('hora');
 
         $query = Solicitud::with(['estado', 'tipo', 'visitantes', 'solicitante']);
         $query = $this->aplicarFiltroSolicitantes($query);
+        $query->where('id_estado_solicitud', 1);
+        $query->filtrarPendientesAutorizador([
+            'solicitante' => $solicitante,
+            'correo'      => $correo,
+            'fecha'       => $fecha,
+            'hora'        => $hora,
+        ]);
 
-        match($filtro) {
-            'aprobadas'  => $query->where('id_estado_solicitud', 2),
-            'rechazadas' => $query->where('id_estado_solicitud', 3),
-            'todos'      => null,
-            default      => $query->where('id_estado_solicitud', 1),
-        };
+        $solicitudes = $query
+            ->orderBy('fecha_inicio', 'asc')
+            ->paginate(10)
+            ->withQueryString();
 
-        $solicitudes = $query->orderBy('fecha_creacion', 'desc')->paginate(10);
-
-        return view('autorizador.index', compact('solicitudes', 'filtro'));
+        return view('autorizador.index', compact('solicitudes', 'solicitante', 'correo', 'fecha', 'hora'));
     }
 
     public function autorizar($id)

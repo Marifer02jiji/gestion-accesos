@@ -79,4 +79,35 @@ class Solicitud extends Model
     {
         return in_array($this->id_estado_solicitud, [1, 2]);
     }
+
+    public function scopeFiltrarPendientesAutorizador($query, array $filtros)
+    {
+        if (!empty($filtros['solicitante'])) {
+            $term = $filtros['solicitante'];
+            $query->whereHas('solicitante', function ($q) use ($term) {
+                $q->where('name', 'like', '%' . $term . '%');
+            });
+        }
+
+        if (!empty($filtros['correo'])) {
+            $term = $filtros['correo'];
+            $query->where(function ($q) use ($term) {
+                $q->whereHas('visitantes', function ($v) use ($term) {
+                    $v->where('correo_personal', 'like', '%' . $term . '%');
+                })->orWhereHas('solicitante', function ($s) use ($term) {
+                    $s->where('email', 'like', '%' . $term . '%');
+                });
+            });
+        }
+
+        if (!empty($filtros['fecha'])) {
+            $query->whereDate('fecha_inicio', $filtros['fecha']);
+        }
+
+        if (!empty($filtros['hora'])) {
+            $query->whereRaw("DATE_FORMAT(fecha_inicio, '%H:%i') = ?", [$filtros['hora']]);
+        }
+
+        return $query;
+    }
 }

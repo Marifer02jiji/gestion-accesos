@@ -1,19 +1,9 @@
 <x-app-layout>
     <x-slot name="header">
-        Solicitudes 
-        @if($filtro == 'pendientes')
-            <span class="bg-yellow-500 text-white px-2 py-1 rounded-full text-xs font-bold ml-2">
-                Pendientes de Autorización
-            </span>
-        @elseif($filtro == 'aprobadas')
-            <span class="bg-green-500 text-white px-2 py-1 rounded-full text-xs font-bold ml-2">
-                Autorizadas
-            </span>
-        @elseif($filtro == 'rechazadas')
-            <span class="bg-red-500 text-white px-2 py-1 rounded-full text-xs font-bold ml-2">
-                Rechazadas
-            </span>
-        @endif
+        Solicitudes
+        <span class="bg-yellow-500 text-white px-2 py-1 rounded-full text-xs font-bold ml-2">
+            Pendientes de Autorización
+        </span>
     </x-slot>
 
     <div>
@@ -43,31 +33,54 @@
                     <i class="fas fa-history"></i> Ver Historial
                 </a>
             </div>
-            <div class="flex items-center gap-3 mb-6 flex-wrap">
-                <span class="font-heading font-semibold text-omg-slate text-sm flex items-center gap-1">
-                    <i class="fas fa-filter"></i> Filtrar:
-                </span>
-                <a href="{{ route('autorizador.index', ['filtro' => 'todos']) }}"
-                   class="px-4 py-1 rounded-full text-sm font-semibold transition"
-                   style="{{ $filtro == 'todos' ? 'background-color:#DA7E2D; color:white;' : 'border:1px solid #A9AAAD; color:#DA7E2D;' }}">
-                    <i class="fas fa-list mr-1"></i> Todos
-                </a>
-                <a href="{{ route('autorizador.index', ['filtro' => 'pendientes']) }}"
-                   class="px-4 py-1 rounded-full text-sm font-semibold transition
-                   {{ $filtro == 'pendientes' ? 'bg-yellow-500 text-white' : 'border border-gray-300 text-omg-slate hover:bg-orange-50' }}">
-                    <i class="fas fa-clock mr-1"></i> Pendientes
-                </a>
-                <a href="{{ route('autorizador.index', ['filtro' => 'aprobadas']) }}"
-                   class="px-4 py-1 rounded-full text-sm font-semibold transition
-                   {{ $filtro == 'aprobadas' ? 'bg-green-500 text-white' : 'border border-gray-300 text-omg-slate hover:bg-orange-50' }}">
-                    <i class="fas fa-check-circle mr-1"></i> Aprobadas
-                </a>
-                <a href="{{ route('autorizador.index', ['filtro' => 'rechazadas']) }}"
-                   class="px-4 py-1 rounded-full text-sm font-semibold transition
-                   {{ $filtro == 'rechazadas' ? 'bg-red-500 text-white' : 'border border-gray-300 text-omg-slate hover:bg-orange-50' }}">
-                    <i class="fas fa-times-circle mr-1"></i> Rechazadas
-                </a>
-            </div>
+            <form method="GET" action="{{ route('autorizador.index') }}" class="mb-6">
+                <div class="flex gap-3 items-end flex-wrap">
+                    <div>
+                        <label class="block text-xs font-semibold text-omg-slate mb-1">
+                            <i class="fas fa-user mr-1"></i> Solicitante
+                        </label>
+                        <input type="text" name="solicitante" value="{{ $solicitante ?? '' }}"
+                            placeholder="Nombre del solicitante"
+                            class="border border-omg-kashmir rounded px-3 py-1 bg-omg-chardon text-sm focus:outline-none focus:ring-2 focus:ring-omg-nile"
+                            style="width: 200px;">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-omg-slate mb-1">
+                            <i class="fas fa-envelope mr-1"></i> Correo
+                        </label>
+                        <input type="text" name="correo" value="{{ $correo ?? '' }}"
+                            placeholder="Correo visitante o solicitante"
+                            class="border border-omg-kashmir rounded px-3 py-1 bg-omg-chardon text-sm focus:outline-none focus:ring-2 focus:ring-omg-nile"
+                            style="width: 220px;">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-omg-slate mb-1">
+                            <i class="fas fa-calendar mr-1"></i> Fecha de visita
+                        </label>
+                        <input type="date" name="fecha" value="{{ $fecha ?? '' }}"
+                            class="border border-omg-kashmir rounded px-3 py-1 bg-omg-chardon text-sm focus:outline-none focus:ring-2 focus:ring-omg-nile"
+                            style="width: 150px;">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-omg-slate mb-1">
+                            <i class="fas fa-clock mr-1"></i> Hora de visita
+                        </label>
+                        <input type="time" name="hora" value="{{ $hora ?? '' }}"
+                            class="border border-omg-kashmir rounded px-3 py-1 bg-omg-chardon text-sm focus:outline-none focus:ring-2 focus:ring-omg-nile"
+                            style="width: 130px;">
+                    </div>
+                    <button type="submit"
+                        class="text-white px-3 py-1 rounded-lg hover:opacity-90 text-sm font-semibold flex items-center gap-1"
+                        style="background-color: #DA7E2D;">
+                        <i class="fas fa-search"></i> Filtrar
+                    </button>
+                    <a href="{{ route('autorizador.index') }}"
+                        class="text-white px-3 py-1 rounded-lg hover:opacity-90 text-sm font-semibold flex items-center gap-1"
+                        style="background-color: #A9AAAD;">
+                        <i class="fas fa-times"></i> Limpiar
+                    </a>
+                </div>
+            </form>
 
             @forelse($solicitudes as $s)
             @php $fechaPasada = now() > \Carbon\Carbon::parse($s->fecha_inicio); @endphp
@@ -235,7 +248,7 @@
                 <div class="flex flex-col items-center gap-2">
                     <i class="fas fa-clipboard-check text-4xl"></i>
                     <p class="font-semibold">No se encontraron registros</p>
-                    <p class="text-sm">No hay solicitudes en esta categoría</p>
+                    <p class="text-sm">No hay solicitudes pendientes con los filtros aplicados</p>
                 </div>
             </div>
             @endforelse
