@@ -121,8 +121,12 @@ class VigilanteController extends Controller
             (string) session('vigilante_area')
         );
 
-        // Verificar si no se marcaron los dos estados (llegada y salida del encuentro)
-        if (!$solicitud->hora_llegada_encuentro || !$solicitud->hora_salida_encuentro) {
+        if (
+            $solicitud->esVisitaEstandar()
+            && (!$solicitud->hora_llegada_encuentro || !$solicitud->hora_salida_encuentro)
+        ) {
+            $solicitud->update(['encuentro_sin_marcar_solicitante' => true]);
+
             \App\Models\Notificacion::create([
                 'id_empleado'  => $solicitud->id_solicitante,
                 'id_solicitud' => $solicitud->id_solicitud,

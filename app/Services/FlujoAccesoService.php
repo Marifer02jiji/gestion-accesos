@@ -108,6 +108,16 @@ class FlujoAccesoService
         if ($estado === self::ESTADO_EN_ENCUENTRO) {
             $this->registrarSalidaEncuentro($solicitud, $registro);
             $autocompletados[] = 'en_transito_salida';
+        }
+
+        if ($autocompletados !== [] && $solicitud->esVisitaEstandar()) {
+            DB::table('solicitud')
+                ->where('id_solicitud', $solicitud->id_solicitud)
+                ->update(['encuentro_sin_marcar_solicitante' => true]);
+            $solicitud->refresh();
+        }
+
+        if ($estado === self::ESTADO_EN_TRANSITO_SALIDA || in_array('en_transito_salida', $autocompletados, true)) {
             return $autocompletados;
         }
 

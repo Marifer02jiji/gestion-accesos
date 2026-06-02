@@ -27,6 +27,7 @@ class Solicitud extends Model
         'hora_llegada_encuentro',
         'hora_salida_encuentro',
         'reenvios_qr',
+        'encuentro_sin_marcar_solicitante',
     ];
 
     // ─── Relaciones ──────────────────────────────────────────────
@@ -64,6 +65,48 @@ class Solicitud extends Model
     public function autorizador()
     {
         return $this->belongsTo(User::class, 'id_autorizador', 'id_empleado_sam');
+    }
+
+    public function resolverAutorizador(): ?User
+    {
+        if (!$this->id_autorizador) {
+            return null;
+        }
+
+        if ($this->relationLoaded('autorizador') && $this->autorizador) {
+            return $this->autorizador;
+        }
+
+        $porSam = User::where('id_empleado_sam', $this->id_autorizador)->first();
+        if ($porSam) {
+            return $porSam;
+        }
+
+        return User::find($this->id_autorizador);
+    }
+
+    public function nombreAutorizador(): string
+    {
+        return $this->resolverAutorizador()?->name ?? '—';
+    }
+
+    public function esVisitaEstandar(): bool
+    {
+        $this->loadMissing('tipo');
+
+        $id = (int) $this->id_tipo_solicitud;
+        if (in_array($id, [3, 4], true)) {
+            return false;
+        }
+
+        $nombre = strtolower($this->tipo->nombre ?? '');
+
+        return !str_contains($nombre, 'consulta') && !str_contains($nombre, 'evento');
+    }
+
+    public function solicitanteNoMarcoEncuentro(): bool
+    {
+        return (bool) $this->encuentro_sin_marcar_solicitante;
     }
 
     // ─── Helpers ─────────────────────────────────────────────────

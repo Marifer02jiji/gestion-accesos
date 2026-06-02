@@ -11,15 +11,15 @@ class ReporteSolicitudController extends Controller
 {
     public function index(Request $request)
     {
-        $esAdmin = $request->routeIs('admin.*');
+        $esVistaAutorizador = $request->routeIs('autorizador.reportes');
+        $esAdmin            = !$esVistaAutorizador;
 
         $filtros = [
             'estado'      => $request->get('estado'),
             'solicitante' => $request->get('solicitante'),
-            'correo'      => $request->get('correo'),
+            'correo'      => $esVistaAutorizador ? $request->get('correo') : null,
             'autorizador' => $esAdmin ? $request->get('autorizador') : null,
-            'fecha'       => $request->get('fecha'),
-            'hora'        => $esAdmin ? $request->get('hora') : null,
+            'fecha'       => $esVistaAutorizador ? $request->get('fecha') : null,
             'tipo'        => $request->get('tipo'),
             'desde'       => $request->get('desde'),
             'hasta'       => $request->get('hasta'),
@@ -27,8 +27,15 @@ class ReporteSolicitudController extends Controller
 
         $query = Solicitud::with(['estado', 'tipo', 'visitantes', 'solicitante', 'autorizador', 'solicitudVisitantes.qr']);
 
-        if (!$esAdmin) {
-            $query->where('id_autorizador', Auth::user()->idSam());
+        if ($esVistaAutorizador) {
+            $idSam  = Auth::user()->idSam();
+            $idUser = Auth::user()->id;
+            $query->where(function ($q) use ($idSam, $idUser) {
+                $q->where('id_autorizador', $idSam);
+                if ((int) $idUser !== (int) $idSam) {
+                    $q->orWhere('id_autorizador', $idUser);
+                }
+            });
         }
 
         $query->filtrarReporteSolicitudes($filtros);
@@ -45,7 +52,14 @@ class ReporteSolicitudController extends Controller
         $tituloPagina  = $esAdmin ? 'Reporte de Solicitudes' : 'Mis solicitudes autorizadas';
 
         return view('reportes.solicitudes', compact(
-            'solicitudes', 'filtros', 'tipos', 'esAdmin', 'rutaReportes', 'rutaRegresar', 'tituloPagina'
+            'solicitudes',
+            'filtros',
+            'tipos',
+            'esAdmin',
+            'esVistaAutorizador',
+            'rutaReportes',
+            'rutaRegresar',
+            'tituloPagina'
         ));
     }
 }

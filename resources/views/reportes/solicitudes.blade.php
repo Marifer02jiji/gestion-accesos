@@ -60,7 +60,7 @@
                 </div>
                 @endif
 
-                @if(!$esAdmin)
+                @if($esVistaAutorizador ?? false)
                 <div>
                     <label class="block text-xs font-semibold text-omg-slate mb-1">
                         <i class="fas fa-envelope mr-1"></i> Visita (correo)
@@ -97,26 +97,6 @@
                         @endforeach
                     </select>
                 </div>
-
-                @if($esAdmin)
-                <div>
-                    <label class="block text-xs font-semibold text-omg-slate mb-1">
-                        <i class="fas fa-calendar mr-1"></i> Fecha de visita
-                    </label>
-                    <input type="date" name="fecha" value="{{ $filtros['fecha'] ?? '' }}"
-                        class="border border-omg-kashmir rounded px-3 py-1 bg-omg-chardon text-sm focus:outline-none"
-                        style="width: 140px;">
-                </div>
-
-                <div>
-                    <label class="block text-xs font-semibold text-omg-slate mb-1">
-                        <i class="fas fa-clock mr-1"></i> Hora de visita
-                    </label>
-                    <input type="time" name="hora" value="{{ $filtros['hora'] ?? '' }}"
-                        class="border border-omg-kashmir rounded px-3 py-1 bg-omg-chardon text-sm focus:outline-none"
-                        style="width: 130px;">
-                </div>
-                @endif
 
                 <div>
                     <label class="block text-xs font-semibold text-omg-slate mb-1">
@@ -164,12 +144,12 @@
             <thead class="text-white" style="background-color: #E26A23;">
                 <tr>
                     <th class="px-4 py-2">Folio</th>
+                    <th class="px-4 py-2">Visitante</th>
                     <th class="px-4 py-2">Solicitante</th>
                     <th class="px-4 py-2">Autorizador</th>
                     <th class="px-4 py-2">Fecha de Visita</th>
                     <th class="px-4 py-2">Tipo</th>
                     <th class="px-4 py-2">Estado</th>
-                    <th class="px-4 py-2">Visitantes</th>
                 </tr>
             </thead>
             <tbody>
@@ -180,8 +160,15 @@
                     <td class="px-4 py-2 font-mono font-bold" style="color: #DA7E2D;">
                         {{ $s->folio ?? $s->id_solicitud }}
                     </td>
+                    <td class="px-4 py-2 text-xs">
+                        @foreach($s->visitantes as $v)
+                            <p class="font-semibold text-omg-slate">{{ $v->nombre }} {{ $v->apellidos }}</p>
+                        @endforeach
+                    </td>
                     <td class="px-4 py-2">{{ $s->solicitante->name ?? 'N/A' }}</td>
-                    <td class="px-4 py-2">{{ $s->autorizador->name ?? '—' }}</td>
+                    <td class="px-4 py-2">
+                        {{ $s->id_autorizador ? $s->nombreAutorizador() : '—' }}
+                    </td>
                     <td class="px-4 py-2">
                         {{ \Carbon\Carbon::parse($s->fecha_inicio)->format('d/m/Y H:i') }}
                     </td>
@@ -198,11 +185,11 @@
                             @else bg-red-500 @endif">
                             {{ $s->estado->nombre }}
                         </span>
-                    </td>
-                    <td class="px-4 py-2 text-xs">
-                        @foreach($s->visitantes as $v)
-                            <p class="text-omg-slate">• {{ $v->nombre }} {{ $v->apellidos }}</p>
-                        @endforeach
+                        @if($s->solicitanteNoMarcoEncuentro())
+                            <span class="block text-xs text-orange-600 font-semibold mt-1">
+                                <i class="fas fa-exclamation-triangle"></i> Encuentro no marcado por solicitante
+                            </span>
+                        @endif
                     </td>
                 </tr>
                 @empty
@@ -224,6 +211,7 @@
                 <tr>
                     <th class="px-4 py-2">Folio</th>
                     <th class="px-4 py-2">Visitante</th>
+                    <th class="px-4 py-2">Correo visitante</th>
                     <th class="px-4 py-2">Solicitante</th>
                     <th class="px-4 py-2">Fecha de Visita</th>
                     <th class="px-4 py-2">Tipo</th>
@@ -241,7 +229,11 @@
                     <td class="px-4 py-2">
                         @foreach($s->visitantes as $v)
                             <p class="font-semibold text-omg-slate">{{ $v->nombre }} {{ $v->apellidos }}</p>
-                            <p class="text-xs text-gray-400">{{ $v->correo_personal }}</p>
+                        @endforeach
+                    </td>
+                    <td class="px-4 py-2 text-xs">
+                        @foreach($s->visitantes as $v)
+                            <p class="text-gray-500">{{ $v->correo_personal }}</p>
                         @endforeach
                     </td>
                     <td class="px-4 py-2">{{ $s->solicitante->name ?? 'N/A' }}</td>
@@ -261,11 +253,16 @@
                             @else bg-red-500 @endif">
                             {{ $s->estado->nombre }}
                         </span>
+                        @if($s->solicitanteNoMarcoEncuentro())
+                            <span class="block text-xs text-orange-600 font-semibold mt-1">
+                                <i class="fas fa-exclamation-triangle"></i> Encuentro no marcado por solicitante
+                            </span>
+                        @endif
                     </td>
                 </tr>
                 @empty
                 <tr>
-                    <td colspan="6" class="text-center px-4 py-8">
+                    <td colspan="7" class="text-center px-4 py-8">
                         <div class="flex flex-col items-center gap-2 text-gray-400">
                             <i class="fas fa-folder-open text-4xl"></i>
                             <p class="font-semibold">No se encontraron registros</p>
