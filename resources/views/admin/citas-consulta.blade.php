@@ -11,11 +11,6 @@
                     <i class="fas fa-stethoscope"></i> Consultas Finalizadas
                 </h3>
                 <div class="flex gap-2">
-                    <a href="{{ route('admin.visitantes-activos') }}"
-                       class="text-white px-4 py-2 rounded hover:opacity-90 font-heading font-semibold flex items-center gap-2 text-sm"
-                       style="background-color: #9ABBC9;">
-                        <i class="fas fa-user-check"></i> Visitantes Activos
-                    </a>
                     <a href="{{ route('admin.todas-solicitudes') }}"
                        class="text-white px-4 py-2 rounded hover:opacity-90 font-heading font-semibold flex items-center gap-2 text-sm"
                        style="background-color: #DA7E2D;">
