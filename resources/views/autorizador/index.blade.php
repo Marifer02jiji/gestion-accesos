@@ -21,16 +21,16 @@
 
         <div class="bg-white shadow-sm rounded-lg p-6">
 
-            {{-- Barra superior con botón de historial --}}
+            {{-- Barra superior con botón de reportes --}}
             <div class="flex justify-between items-center mb-6">
                 <h3 class="text-lg font-heading font-semibold text-omg-slate flex items-center gap-2">
                     <i class="fas fa-list" style="color: #DA7E2D;"></i>
                     Solicitudes para Autorizar
                 </h3>
-                <a href="{{ route('autorizador.historial') }}"
+                <a href="{{ route('autorizador.reportes') }}"
                    class="text-white px-4 py-2 rounded hover:opacity-90 font-heading font-semibold flex items-center gap-2"
                    style="background-color: #3B5675;">
-                    <i class="fas fa-history"></i> Ver Historial
+                    <i class="fas fa-chart-bar"></i> Reportes
                 </a>
             </div>
             <form method="GET" action="{{ route('autorizador.index') }}" class="mb-6">

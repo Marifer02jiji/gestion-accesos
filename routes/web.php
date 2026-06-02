@@ -5,6 +5,7 @@ use App\Http\Controllers\SolicitudController;
 use App\Http\Controllers\AutorizadorController;
 use App\Http\Controllers\VigilanteController;
 use App\Http\Controllers\AdminController;
+use App\Http\Controllers\ReporteSolicitudController;
 use App\Http\Controllers\NotificacionController;
 use App\Http\Controllers\EventoController;
 use App\Http\Controllers\ResetPasswordController;
@@ -39,7 +40,7 @@ Route::middleware(['auth', 'role:solicitante'])->group(function () {
 // Rutas Autorizador
 Route::middleware(['auth', 'role:autorizador'])->group(function () {
     Route::get('/autorizador', [AutorizadorController::class, 'index'])->name('autorizador.index');
-    Route::get('/autorizador/historial', [AutorizadorController::class, 'historial'])->name('autorizador.historial');
+    Route::get('/autorizador/reportes', [ReporteSolicitudController::class, 'index'])->name('autorizador.reportes');
     Route::post('/autorizador/{id}/autorizar', [AutorizadorController::class, 'autorizar'])->name('autorizador.autorizar');
     Route::post('/autorizador/{id}/rechazar', [AutorizadorController::class, 'rechazar'])->name('autorizador.rechazar');
 });
@@ -58,7 +59,7 @@ Route::middleware(['auth', 'role:vigilante'])->group(function () {
 // Rutas Administrador
 Route::middleware(['auth', 'role:administrador'])->group(function () {
     Route::get('/admin/reportes', [AdminController::class, 'reportes'])->name('admin.reportes');
-    Route::get('/admin/todas-solicitudes', [AdminController::class, 'todasLasSolicitudes'])->name('admin.todas-solicitudes');
+    Route::get('/admin/todas-solicitudes', [ReporteSolicitudController::class, 'index'])->name('admin.todas-solicitudes');
     Route::get('/admin/reporte-visitas', [AdminController::class, 'reporteVisitas'])->name('admin.reporte-visitas');
     Route::get('/admin/citas-consulta', [AdminController::class, 'citasConsulta'])->name('admin.citas-consulta');
     Route::get('/admin/exclusiones', [AdminController::class, 'exclusiones'])->name('admin.exclusiones');

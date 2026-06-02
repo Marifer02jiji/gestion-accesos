@@ -45,7 +45,7 @@
                     <a href="{{ route('admin.todas-solicitudes') }}"
                        class="text-white px-4 py-2 rounded hover:opacity-90 font-heading font-semibold flex items-center gap-2 text-sm"
                        style="background-color: #DA7E2D;">
-                        <i class="fas fa-list-check"></i> Ver Todas las Solicitudes
+                        <i class="fas fa-chart-bar"></i> Reporte de Solicitudes
                     </a>
                     <a href="{{ route('admin.reporte-visitas') }}"
                        class="text-white px-4 py-2 rounded hover:opacity-90 font-heading font-semibold flex items-center gap-2 text-sm"

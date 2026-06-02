@@ -61,6 +61,11 @@ class Solicitud extends Model
         return $this->belongsTo(User::class, 'id_solicitante', 'id_empleado_sam');
     }
 
+    public function autorizador()
+    {
+        return $this->belongsTo(User::class, 'id_autorizador', 'id_empleado_sam');
+    }
+
     // ─── Helpers ─────────────────────────────────────────────────
 
     // Folio de la solicitud: XXXX-XXXX (solo números)
@@ -106,6 +111,49 @@ class Solicitud extends Model
 
         if (!empty($filtros['hora'])) {
             $query->whereRaw("DATE_FORMAT(fecha_inicio, '%H:%i') = ?", [$filtros['hora']]);
+        }
+
+        return $query;
+    }
+
+    public function scopeFiltrarReporteSolicitudes($query, array $filtros)
+    {
+        if (!empty($filtros['estado'])) {
+            $query->where('id_estado_solicitud', $filtros['estado']);
+        }
+
+        if (!empty($filtros['solicitante'])) {
+            $term = $filtros['solicitante'];
+            $query->whereHas('solicitante', function ($q) use ($term) {
+                $q->where('name', 'like', '%' . $term . '%');
+            });
+        }
+
+        if (!empty($filtros['autorizador'])) {
+            $term = $filtros['autorizador'];
+            $query->whereHas('autorizador', function ($q) use ($term) {
+                $q->where('name', 'like', '%' . $term . '%');
+            });
+        }
+
+        if (!empty($filtros['tipo'])) {
+            $query->where('id_tipo_solicitud', $filtros['tipo']);
+        }
+
+        if (!empty($filtros['fecha'])) {
+            $query->whereDate('fecha_inicio', $filtros['fecha']);
+        }
+
+        if (!empty($filtros['hora'])) {
+            $query->whereRaw("DATE_FORMAT(fecha_inicio, '%H:%i') = ?", [$filtros['hora']]);
+        }
+
+        if (!empty($filtros['desde'])) {
+            $query->whereDate('fecha_inicio', '>=', $filtros['desde']);
+        }
+
+        if (!empty($filtros['hasta'])) {
+            $query->whereDate('fecha_inicio', '<=', $filtros['hasta']);
         }
 
         return $query;

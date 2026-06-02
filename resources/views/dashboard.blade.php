@@ -35,6 +35,20 @@
             </div>
             <p class="text-sm text-gray-500"><i class="fas fa-info-circle mr-1"></i> Autoriza o rechaza solicitudes.</p>
         </a>
+
+        <a href="{{ route('autorizador.reportes') }}"
+            class="w-80 bg-white shadow-sm rounded-xl p-6 hover:shadow-md transition border-l-4 border-omg-coral">
+            <div class="flex items-center gap-4 mb-3">
+                <div class="bg-omg-chardon p-4 rounded-full">
+                    <i class="fas fa-chart-bar text-omg-coral text-2xl"></i>
+                </div>
+                <div>
+                    <h3 class="font-heading font-bold text-omg-nile text-lg">Reportes</h3>
+                    <p class="text-sm text-omg-slate">Mis solicitudes autorizadas</p>
+                </div>
+            </div>
+            <p class="text-sm text-gray-500"><i class="fas fa-info-circle mr-1"></i> Consulta y filtra tus solicitudes procesadas.</p>
+        </a>
         @endrole
 
         @role('vigilante')

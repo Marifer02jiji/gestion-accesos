@@ -21,40 +21,13 @@ class AdminController extends Controller
         $visitantesActivos  = RegistroAcceso::whereNull('hora_salida_institucion')->count();
         $ultimasSolicitudes = Solicitud::with(['estado', 'tipo', 'solicitante'])
             ->orderBy('fecha_creacion', 'desc')
-            ->paginate(15); // Cambiar a paginación de 15 en lugar de limitar a 10
+            ->paginate(15);
 
         return view('admin.reportes', compact(
             'totalSolicitudes', 'pendientes', 'autorizadas',
             'rechazadas', 'canceladas', 'totalAccesos',
             'visitantesActivos', 'ultimasSolicitudes'
         ));
-    }
-
-    public function todasLasSolicitudes(Request $request)
-    {
-        $estado = $request->get('estado');
-        $desde  = $request->get('desde');
-        $hasta  = $request->get('hasta');
-
-        $query = Solicitud::with(['estado', 'tipo', 'solicitante', 'visitantes']);
-
-        if ($estado) {
-            $query->where('id_estado_solicitud', $estado);
-        }
-
-        if ($desde) {
-            $query->whereDate('fecha_inicio', '>=', $desde);
-        }
-
-        if ($hasta) {
-            $query->whereDate('fecha_inicio', '<=', $hasta);
-        }
-
-        $solicitudes = $query->orderBy('fecha_creacion', 'desc')
-            ->paginate(25)
-            ->withQueryString();
-
-        return view('admin.todas-solicitudes', compact('solicitudes', 'estado', 'desde', 'hasta'));
     }
 
     public function storeExclusion(Request $request)
