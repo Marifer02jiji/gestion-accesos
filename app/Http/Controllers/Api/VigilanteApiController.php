@@ -339,6 +339,7 @@ class VigilanteApiController extends Controller
                 $this->flujoAcceso()->marcarFinalizada($solicitud);
 
                 if ((int) $solicitud->id_solicitante > 0) {
+                    // Notificación base de salida
                     \App\Models\Notificacion::create([
                         'id_empleado'  => $solicitud->id_solicitante,
                         'id_solicitud' => $solicitud->id_solicitud,
@@ -346,6 +347,28 @@ class VigilanteApiController extends Controller
                         'mensaje'      => "Tu visitante salió de la institución. Folio: {$solicitud->folio}",
                         'leida'        => false,
                     ]);
+
+                    // Notificación adicional si no marcó estados intermedios
+                    if (!empty($estadosAutocompletados)) {
+                        $tieneEncuentro  = in_array('en_encuentro', $estadosAutocompletados);
+                        $tieneTransito   = in_array('en_transito_salida', $estadosAutocompletados);
+
+                        if ($tieneEncuentro && $tieneTransito) {
+                            $estadosTexto = 'llegada y salida del lugar de encuentro';
+                        } elseif ($tieneEncuentro) {
+                            $estadosTexto = 'llegada al lugar de encuentro';
+                        } else {
+                            $estadosTexto = 'salida del lugar de encuentro';
+                        }
+
+                        \App\Models\Notificacion::create([
+                            'id_empleado'  => $solicitud->id_solicitante,
+                            'id_solicitud' => $solicitud->id_solicitud,
+                            'tipo'         => 'encuentro',
+                            'mensaje'      => "⚠️ Tu visitante salió pero no registraste la {$estadosTexto}. Folio: {$solicitud->folio}",
+                            'leida'        => false,
+                        ]);
+                    }
                 }
             }
         } catch (\InvalidArgumentException $e) {
@@ -371,34 +394,33 @@ class VigilanteApiController extends Controller
 
         return response()->json([
             'data' => [
-                'tipo_acceso'            => (int) $solicitud->id_tipo_solicitud === 4 ? 'consulta' : 'normal',
-                'id_qr'                  => $qr->id_qr,
-                'acceso_concedido'       => true,
-                'accion_disponible'      => $accionDisponible,
-                'motivo_rechazo'         => null,
-                'id_estado_solicitud'    => (int) $solicitud->id_estado_solicitud,
-                'estado_solicitud'       => $solicitud->estado->nombre ?? '',
-                'estados_autocompletados'=> $estadosAutocompletados,
-                'visitante'              => [
+                'tipo_acceso'             => (int) $solicitud->id_tipo_solicitud === 4 ? 'consulta' : 'normal',
+                'id_qr'                   => $qr->id_qr,
+                'acceso_concedido'        => true,
+                'accion_disponible'       => $accionDisponible,
+                'motivo_rechazo'          => null,
+                'id_estado_solicitud'     => (int) $solicitud->id_estado_solicitud,
+                'estado_solicitud'        => $solicitud->estado->nombre ?? '',
+                'estados_autocompletados' => $estadosAutocompletados,
+                'visitante'               => [
                     'nombre'          => $visitante->nombre,
                     'apellidos'       => $visitante->apellidos,
                     'correo_personal' => $visitante->correo_personal,
                 ],
-                'solicitante'            => $solicitanteInfo,
-                'solicitud'              => [
-                    'folio'             => $solicitud->folio,
-                    'motivo_visita'     => $solicitud->motivo_visita,
-                    'vigencia_inicio'   => $qr->vigencia_inicio,
-                    'vigencia_final'    => $qr->vigencia_final,
-                    'lugar_encuentro'   => $solicitud->lugar_encuentro,
-                    'tolerancia_antes'  => (int) $solicitud->tolerancia_antes,
-                    'tolerancia_despues'=> (int) $solicitud->tolerancia_despues,
-                    'tipo_visita'       => $solicitud->tipo->nombre ?? '',
+                'solicitante'             => $solicitanteInfo,
+                'solicitud'               => [
+                    'folio'              => $solicitud->folio,
+                    'motivo_visita'      => $solicitud->motivo_visita,
+                    'vigencia_inicio'    => $qr->vigencia_inicio,
+                    'vigencia_final'     => $qr->vigencia_final,
+                    'lugar_encuentro'    => $solicitud->lugar_encuentro,
+                    'tolerancia_antes'   => (int) $solicitud->tolerancia_antes,
+                    'tolerancia_despues' => (int) $solicitud->tolerancia_despues,
+                    'tipo_visita'        => $solicitud->tipo->nombre ?? '',
                 ],
             ],
         ], 200);
     }
-
 
 
 

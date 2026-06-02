@@ -40,14 +40,14 @@
                 class="border border-omg-kashmir rounded px-3 py-2 bg-omg-chardon text-sm focus:outline-none focus:ring-2 focus:ring-omg-nile cursor-pointer"
                 onchange="window.location.href='{{ route('solicitudes.index') }}?estado=' + this.value">
                 <option value="">📋 Todas las Solicitudes</option>
-                <option value="1" {{ ($estado ?? '') == '1' ? 'selected' : '' }}>⏳ Pendiente</option>
-                <option value="2" {{ ($estado ?? '') == '2' ? 'selected' : '' }}>✅ Autorizada</option>
-                <option value="3" {{ ($estado ?? '') == '3' ? 'selected' : '' }}>❌ Rechazada</option>
-                <option value="4" {{ ($estado ?? '') == '4' ? 'selected' : '' }}>🚫 Cancelada</option>
-                <option value="5" {{ ($estado ?? '') == '5' ? 'selected' : '' }}>🏢 En Institución</option>
-                <option value="6" {{ ($estado ?? '') == '6' ? 'selected' : '' }}>🤝 En Encuentro</option>
-                <option value="7" {{ ($estado ?? '') == '7' ? 'selected' : '' }}>🚶 En Tránsito</option>
-                <option value="8" {{ ($estado ?? '') == '8' ? 'selected' : '' }}>✔️ Finalizada</option>
+                <option value="1" {{ ($estado ?? '') == '1' ? 'selected' : '' }}> Pendiente</option>
+                <option value="2" {{ ($estado ?? '') == '2' ? 'selected' : '' }}> Autorizada</option>
+                <option value="3" {{ ($estado ?? '') == '3' ? 'selected' : '' }}> Rechazada</option>
+                <option value="4" {{ ($estado ?? '') == '4' ? 'selected' : '' }}> Cancelada</option>
+                <option value="5" {{ ($estado ?? '') == '5' ? 'selected' : '' }}> En Institución</option>
+                <option value="6" {{ ($estado ?? '') == '6' ? 'selected' : '' }}> En Encuentro</option>
+                <option value="7" {{ ($estado ?? '') == '7' ? 'selected' : '' }}> En Tránsito</option>
+                <option value="8" {{ ($estado ?? '') == '8' ? 'selected' : '' }}> Finalizada</option>
             </select>
         </div>
 

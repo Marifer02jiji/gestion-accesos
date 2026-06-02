@@ -289,10 +289,10 @@ class SolicitudApiController extends Controller
 
         return response()->json(['message' => 'Solicitud obtenida correctamente.', 'data' => $solicitud]);
     }
-
+    
     public function cancelar($id)
     {
-        $solicitud = Solicitud::with('solicitudVisitantes.qr')->findOrFail($id);
+        $solicitud = Solicitud::with(['solicitudVisitantes.qr', 'solicitudVisitantes.visitante'])->findOrFail($id);
 
         if (!$solicitud->esCancelable()) {
             return response()->json(['message' => 'Esta solicitud no puede cancelarse.', 'data' => null], 422);
@@ -310,9 +310,28 @@ class SolicitudApiController extends Controller
             'fecha_cancelacion'   => now(),
         ]);
 
-        return response()->json(['message' => 'Solicitud cancelada correctamente.', 'data' => $solicitud]);
-    }
+        // Enviar correo al visitante
+        $anfitrion = auth()->user()->name ?? 'el anfitrión';
+        foreach ($solicitud->solicitudVisitantes as $sv) {
+            $correo = $sv->visitante->correo_personal ?? null;
+            if (!$correo) continue;
+            try {
+                \Illuminate\Support\Facades\Mail::to($correo)->send(
+                    new \App\Mail\SolicitudCanceladaMail($sv->visitante, $solicitud, $anfitrion)
+                );
+            } catch (\Throwable $e) {
+                \Illuminate\Support\Facades\Log::error('Error enviando correo cancelacion API: ' . $e->getMessage());
+            }
+        }
 
+        $solicitud = Solicitud::with(['estado', 'tipo', 'visitantes', 'solicitante', 'solicitudVisitantes.qr'])->findOrFail($id);
+
+        return response()->json([
+            'message'            => 'Solicitud cancelada correctamente.',
+            'correo_cancelacion' => true,
+            'data'               => $solicitud,
+        ]);
+    }
     public function qr($id)
     {
         $solicitud = Solicitud::with('solicitudVisitantes.qr')->findOrFail($id);
