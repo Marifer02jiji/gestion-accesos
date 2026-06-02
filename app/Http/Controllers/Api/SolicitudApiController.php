@@ -35,7 +35,6 @@ class SolicitudApiController extends Controller
         return (string) (auth()->user()->name ?? '');
     }
 
-    /** Estados en los que el solicitante puede consultar o enviar el QR por correo. */
     private function estadosPermitenEnvioQr(): array
     {
         return [
@@ -56,9 +55,9 @@ class SolicitudApiController extends Controller
 
     private function aplicarFiltroSolicitantesAutorizador($query)
     {
-        $idPropio   = $this->idEmpleado();
-        $visibles   = $this->solicitantesVisiblesAutorizador();
-        $filtrados  = array_values(array_filter(
+        $idPropio  = $this->idEmpleado();
+        $visibles  = $this->solicitantesVisiblesAutorizador();
+        $filtrados = array_values(array_filter(
             array_map('intval', $visibles),
             fn ($id) => $id > 0 && $id !== $idPropio
         ));
@@ -67,8 +66,6 @@ class SolicitudApiController extends Controller
             return $query->whereIn('id_solicitante', $filtrados);
         }
 
-        // Sin empleados en SAM: no usar whereIn([]) (devuelve 0 filas).
-        // Mostrar pendientes de otros, excluyendo las propias.
         return $query->where('id_solicitante', '!=', $idPropio);
     }
 
@@ -94,17 +91,15 @@ class SolicitudApiController extends Controller
         $flujo  = new FlujoAccesoService();
         $visita = $flujo->formatearVisitaActiva($solicitud);
 
-        $solicitud->id_estado_solicitud   = $visita['id_estado_solicitud'];
-        $solicitud->estado_nombre         = $visita['estado'];
-        $solicitud->hora_llegada_campus   = $visita['hora_llegada_campus'];
+        $solicitud->id_estado_solicitud    = $visita['id_estado_solicitud'];
+        $solicitud->estado_nombre          = $visita['estado'];
+        $solicitud->hora_llegada_campus    = $visita['hora_llegada_campus'];
         $solicitud->hora_llegada_encuentro = $visita['hora_llegada_area'];
         $solicitud->hora_salida_encuentro  = $visita['hora_salida_area'];
-        $solicitud->hora_salida_campus    = $visita['hora_salida_campus'];
-        $solicitud->fecha_encuentro       = $solicitud->fecha_inicio;
+        $solicitud->hora_salida_campus     = $visita['hora_salida_campus'];
+        $solicitud->fecha_encuentro        = $solicitud->fecha_inicio;
 
-        $solicitud->nombre_solicitante = $solicitud->solicitante->name
-            ?? $solicitud->solicitante->nombre
-            ?? 'Sin nombre';
+        $solicitud->nombre_solicitante  = $solicitud->solicitante->name ?? $solicitud->solicitante->nombre ?? 'Sin nombre';
         $solicitud->usuario_solicitante = $solicitud->solicitante->name ?? '';
 
         if ((int) $solicitud->id_solicitante > 0) {
@@ -115,9 +110,7 @@ class SolicitudApiController extends Controller
                     ->first();
 
                 if ($empleado) {
-                    $nombreCompleto = trim(
-                        ($empleado->nombre ?? '') . ' ' . ($empleado->apellidoPa ?? '')
-                    );
+                    $nombreCompleto = trim(($empleado->nombre ?? '') . ' ' . ($empleado->apellidoPa ?? ''));
                     if ($nombreCompleto !== '') {
                         $solicitud->nombre_solicitante = $nombreCompleto;
                     }
@@ -131,8 +124,7 @@ class SolicitudApiController extends Controller
         }
 
         $solicitud->correo_solicitante = $solicitud->solicitante->email ?? '';
-
-        $solicitud->tipo_visita = $solicitud->tipo->nombre
+        $solicitud->tipo_visita        = $solicitud->tipo->nombre
             ?? $solicitud->tipo->descripcion
             ?? $this->mapearTipoSolicitud($solicitud->id_tipo_solicitud);
 
@@ -161,7 +153,6 @@ class SolicitudApiController extends Controller
         return now()->greaterThan($this->fechaVencimientoSolicitud($solicitud));
     }
 
-    /** Día del encuentro ya pasó (solo fecha calendario, sin tolerancia). */
     private function diaEncuentroPasado(Solicitud $solicitud): bool
     {
         return Carbon::parse($solicitud->fecha_inicio)
@@ -226,7 +217,7 @@ class SolicitudApiController extends Controller
                     return;
                 }
 
-                if ($dia === 7 && $hora >= 14) {
+                if ($dia === 6 && $hora >= 14) {
                     $fail('Los sabados solo se permiten visitas hasta las 2:00 PM.');
                     return;
                 }
@@ -290,11 +281,6 @@ class SolicitudApiController extends Controller
         return response()->json(['message' => 'Solicitud obtenida correctamente.', 'data' => $solicitud]);
     }
 
-
-
-
-    //---------------------------------------
-
     public function cancelar($id)
     {
         $solicitud = Solicitud::with(['solicitudVisitantes.qr', 'solicitudVisitantes.visitante'])->findOrFail($id);
@@ -329,8 +315,7 @@ class SolicitudApiController extends Controller
             }
         }
 
-        $solicitud = Solicitud::with(['estado', 'tipo', 'visitantes', 'solicitante', 'solicitudVisitantes.qr'])->findOrFail($id);
-
+        $solicitud  = Solicitud::with(['estado', 'tipo', 'visitantes', 'solicitante', 'solicitudVisitantes.qr'])->findOrFail($id);
         $solicitudData = $solicitud->toArray();
         $solicitudData['correo_cancelacion'] = true;
 
@@ -341,18 +326,6 @@ class SolicitudApiController extends Controller
         ]);
     }
 
-
-//------------------------------------
-
-
-        $solicitud = Solicitud::with(['estado', 'tipo', 'visitantes', 'solicitante', 'solicitudVisitantes.qr'])->findOrFail($id);
-
-        return response()->json([
-            'message'            => 'Solicitud cancelada correctamente.',
-            'correo_cancelacion' => true,
-            'data'               => $solicitud,
-        ]);
-    }
     public function qr($id)
     {
         $solicitud = Solicitud::with('solicitudVisitantes.qr')->findOrFail($id);
@@ -387,17 +360,10 @@ class SolicitudApiController extends Controller
 
         foreach ($solicitud->solicitudVisitantes as $sv) {
             $qr = $sv->qr;
-            if (!$qr) {
-                $errores++;
-                continue;
-            }
+            if (!$qr) { $errores++; continue; }
 
             $correo = trim((string) ($sv->visitante->correo_personal ?? ''));
-            if ($correo === '') {
-                $errores++;
-                Log::warning("enviarQR: visitante sin correo — solicitud {$id}, sv {$sv->id_solicitud_visitante}");
-                continue;
-            }
+            if ($correo === '') { $errores++; continue; }
 
             try {
                 Mail::to($correo)->send(new EnviarQRMail($qr));
@@ -409,12 +375,8 @@ class SolicitudApiController extends Controller
         }
 
         if ($enviados === 0) {
-            $detalle = $errores > 0
-                ? 'Revise correo del visitante y configuración de correo (MAIL_*).'
-                : 'No hay código QR generado para esta solicitud. Autorícela de nuevo o contacte soporte.';
-
             return response()->json([
-                'message' => 'No se pudo enviar el QR. ' . $detalle,
+                'message' => 'No se pudo enviar el QR.',
                 'data'    => ['enviados' => 0, 'errores' => $errores],
             ], 500);
         }
@@ -471,14 +433,14 @@ class SolicitudApiController extends Controller
 
     public function extenderQR(Request $request, $id)
     {
-        $solicitud  = Solicitud::with('solicitudVisitantes.qr')->findOrFail($id);
-        $minutos    = (int) $request->input('minutos_extra', 60);
-        $extendidos = 0;
+        $solicitud = Solicitud::with('solicitudVisitantes.qr')->findOrFail($id);
+        $minutos   = (int) $request->input('minutos_extra', 60);
 
         if ($minutos <= 0) {
             return response()->json(['message' => 'Los minutos extra deben ser mayores a cero.', 'data' => null], 422);
         }
 
+        $extendidos = 0;
         foreach ($solicitud->solicitudVisitantes as $sv) {
             if ($sv->qr && in_array($sv->qr->id_estadoQr, [1, 2])) {
                 $sv->qr->update([
@@ -507,22 +469,16 @@ class SolicitudApiController extends Controller
             ->with(['visitantes', 'estado', 'tipo', 'solicitudVisitantes.qr'])
             ->get()
             ->filter(function ($s) use ($flujo) {
-                if ($flujo->registroEntradaActivoParaSolicitud($s)) {
-                    return true;
-                }
-
-                return ! $this->solicitudYaVencio($s);
+                if ($flujo->registroEntradaActivoParaSolicitud($s)) return true;
+                return !$this->solicitudYaVencio($s);
             })
             ->values();
 
         $data = $solicitudes->map(function ($s) use ($flujo) {
-            if (
-                $flujo->registroEntradaActivoParaSolicitud($s)
-                && (int) $s->id_estado_solicitud < FlujoAccesoService::ESTADO_EN_INSTITUCION
-            ) {
+            if ($flujo->registroEntradaActivoParaSolicitud($s)
+                && (int) $s->id_estado_solicitud < FlujoAccesoService::ESTADO_EN_INSTITUCION) {
                 $flujo->marcarEnInstitucion($s);
             }
-
             return $flujo->formatearVisitaActiva($s);
         });
 
@@ -541,10 +497,8 @@ class SolicitudApiController extends Controller
         $flujo    = new FlujoAccesoService();
         $registro = $flujo->registroEntradaActivoParaSolicitud($solicitud);
 
-        if (
-            $registro?->hora_llegada_institucion
-            && (int) $solicitud->id_estado_solicitud < FlujoAccesoService::ESTADO_EN_INSTITUCION
-        ) {
+        if ($registro?->hora_llegada_institucion
+            && (int) $solicitud->id_estado_solicitud < FlujoAccesoService::ESTADO_EN_INSTITUCION) {
             $flujo->marcarEnInstitucion($solicitud);
         }
 
@@ -571,10 +525,8 @@ class SolicitudApiController extends Controller
         $flujo    = new FlujoAccesoService();
         $registro = $flujo->registroEntradaActivoParaSolicitud($solicitud);
 
-        if (
-            (int) $solicitud->id_estado_solicitud < FlujoAccesoService::ESTADO_EN_ENCUENTRO
-            && ($solicitud->hora_llegada_encuentro || $registro?->hora_llegada_encuentro)
-        ) {
+        if ((int) $solicitud->id_estado_solicitud < FlujoAccesoService::ESTADO_EN_ENCUENTRO
+            && ($solicitud->hora_llegada_encuentro || $registro?->hora_llegada_encuentro)) {
             if ((int) $solicitud->id_estado_solicitud < FlujoAccesoService::ESTADO_EN_INSTITUCION) {
                 $flujo->marcarEnInstitucion($solicitud);
             }
@@ -602,7 +554,6 @@ class SolicitudApiController extends Controller
         $this->cancelarPendientesVencidas();
 
         $filtro = strtolower($request->get('filtro', 'pendientes'));
-
         $query  = Solicitud::with(['estado', 'tipo', 'visitantes', 'solicitante']);
         $this->aplicarFiltroSolicitantesAutorizador($query);
 
@@ -707,4 +658,3 @@ class SolicitudApiController extends Controller
         return response()->json(['message' => 'Solicitud rechazada correctamente.', 'data' => $solicitud]);
     }
 }
-
