@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\StoreSolicitudRequest;
 use App\Models\CaTipoSolicitud;
+use App\Models\ListaExclusion;
 use App\Models\Notificacion;
 use App\Models\QR;
 use App\Models\Solicitud;
@@ -77,6 +78,25 @@ class SolicitudController extends Controller
 
     public function store(StoreSolicitudRequest $request)
     {
+        // Verificar si algún visitante está en la lista de exclusión
+        $visitantesEnExclusion = [];
+        foreach ($request->visitante_correo as $index => $correo) {
+            // Buscar visitante por correo
+            $visitante = Visitante::where('correo_personal', $correo)->first();
+            if ($visitante) {
+                $enExclusion = ListaExclusion::where('id_visitante', $visitante->id_visitante)->exists();
+                if ($enExclusion) {
+                    $visitantesEnExclusion[] = trim($request->visitante_nombre[$index]) . ' ' . trim($request->visitante_apellidos[$index]);
+                }
+            }
+        }
+
+        // Si hay visitantes en exclusión, rechazar la solicitud con advertencia
+        if (!empty($visitantesEnExclusion)) {
+            return redirect()->route('solicitudes.create')
+                ->with('error', 'No se puede crear la solicitud. Los siguientes visitantes están en lista de exclusión: ' . implode(', ', $visitantesEnExclusion));
+        }
+
         $solicitud = Solicitud::create([
             'folio'               => Solicitud::generarFolio(),
             'fecha_inicio'        => $request->fecha_inicio,
@@ -178,6 +198,20 @@ class SolicitudController extends Controller
         if (now() > $fechaExpiracion) {
             return redirect()->route('solicitudes.show', $id)
                 ->with('error', 'No se puede enviar el QR, la visita ya expiro.');
+        }
+
+        // Verificar si algún visitante está en la lista de exclusión
+        $visitantesEnExclusion = [];
+        foreach ($solicitud->solicitudVisitantes as $sv) {
+            $enExclusion = ListaExclusion::where('id_visitante', $sv->id_visitante)->exists();
+            if ($enExclusion) {
+                $visitantesEnExclusion[] = $sv->visitante->nombre . ' ' . $sv->visitante->apellidos;
+            }
+        }
+
+        if (!empty($visitantesEnExclusion)) {
+            return redirect()->route('solicitudes.show', $id)
+                ->with('error', 'No se puede enviar el QR. Los siguientes visitantes están en lista de exclusión: ' . implode(', ', $visitantesEnExclusion));
         }
 
         $enviados = 0;

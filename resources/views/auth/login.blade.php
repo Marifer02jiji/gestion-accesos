@@ -64,14 +64,6 @@
                     <i class="fas fa-sign-in-alt"></i> Iniciar Sesión
                 </button>
 
-                <div class="text-center mt-3">
-                    <a href="{{ route('password.reset.simple') }}"
-                        class="text-xs hover:opacity-80"
-                        style="color: #3B5675;">
-                        <i class="fas fa-key mr-1"></i> ¿Olvidaste tu contraseña?
-                    </a>
-                </div>
-
             </form>
         </div>
 

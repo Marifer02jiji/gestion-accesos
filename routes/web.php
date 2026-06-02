@@ -74,6 +74,8 @@ Route::middleware(['auth', 'role:organizador'])->group(function () {
     Route::get('/eventos/crear', [EventoController::class, 'create'])->name('eventos.create');
     Route::post('/eventos', [EventoController::class, 'store'])->name('eventos.store');
     Route::get('/eventos/{id}', [EventoController::class, 'show'])->name('eventos.show');
+    Route::get('/eventos/{id}/editar', [EventoController::class, 'edit'])->name('eventos.edit');
+    Route::put('/eventos/{id}', [EventoController::class, 'update'])->name('eventos.update');
     Route::post('/eventos/{id}/reenviar-qr', [EventoController::class, 'reenviarQR'])->name('eventos.reenviarQR');
     Route::delete('/eventos/{id}', [EventoController::class, 'destroy'])->name('eventos.destroy');
 });
@@ -95,7 +97,3 @@ Route::middleware(['auth'])->group(function () {
 });
 
 require __DIR__.'/auth.php';
-
-// Reset contraseña simple — DEBE ir después del require para evitar conflictos
-Route::get('/recuperar-contrasena', [ResetPasswordController::class, 'show'])->name('password.reset.simple');
-Route::post('/recuperar-contrasena', [ResetPasswordController::class, 'reset'])->name('password.reset.simple.post');

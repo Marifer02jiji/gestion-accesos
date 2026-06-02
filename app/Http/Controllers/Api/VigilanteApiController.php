@@ -812,4 +812,59 @@ class VigilanteApiController extends Controller
             ],
         ];
     }
+
+    /**
+     * Obtener eventos activos dentro de la institución
+     * Los eventos activos son aquellos cuya fecha_evento es hoy y están en estado vigente
+     */
+    public function eventosActivos(): JsonResponse
+    {
+        $ahora = now();
+        
+        $eventos = Evento::with('qr')
+            ->whereDate('fecha_evento', $ahora->toDateString())
+            ->where('id_estado_solicitud', 2) // Evento aprobado/vigente
+            ->where(function ($query) use ($ahora) {
+                // Evento debe estar dentro de su ventana de tiempo (considerando tolerancias)
+                $query->whereRaw('DATE_SUB(fecha_evento, INTERVAL tolerancia_antes MINUTE) <= ?', [$ahora])
+                      ->whereRaw('DATE_ADD(fecha_evento, INTERVAL tolerancia_despues MINUTE) >= ?', [$ahora]);
+            })
+            ->orderBy('fecha_evento', 'asc')
+            ->get()
+            ->map(function ($evento) use ($ahora) {
+                // Calcular si el evento ya comenzó o si es próximo
+                $fechaEvento = \Carbon\Carbon::parse($evento->fecha_evento);
+                $vigenciaInicio = $fechaEvento->copy()->subMinutes($evento->tolerancia_antes);
+                $vigenciaFinal = $fechaEvento->copy()->addMinutes($evento->tolerancia_despues);
+                
+                $estado = 'próximo';
+                if ($ahora->greaterThanOrEqualTo($vigenciaInicio) && $ahora->lessThan($fechaEvento)) {
+                    $estado = 'en_registro';
+                } elseif ($ahora->greaterThanOrEqualTo($fechaEvento) && $ahora->lessThanOrEqualTo($vigenciaFinal)) {
+                    $estado = 'en_curso';
+                }
+                
+                return [
+                    'id_evento'          => $evento->id_evento,
+                    'folio'              => $evento->folio,
+                    'tipo_evento'        => $evento->tipo_evento,
+                    'descripcion'        => $evento->descripcion,
+                    'lugar'              => $evento->lugar,
+                    'fecha_evento'       => $evento->fecha_evento,
+                    'numero_personas'    => (int) $evento->numero_personas,
+                    'nombre_responsable' => $evento->nombre_responsable,
+                    'correo_responsable' => $evento->correo_responsable,
+                    'codigo_qr'          => $evento->qr?->codigo_numerico ?? null,
+                    'vigencia_inicio'    => $vigenciaInicio->toDateTimeString(),
+                    'vigencia_final'     => $vigenciaFinal->toDateTimeString(),
+                    'estado'             => $estado,
+                ];
+            });
+
+        return response()->json([
+            'message' => 'Eventos activos dentro de la institución',
+            'data'    => $eventos->values(),
+            'total'   => $eventos->count(),
+        ]);
+    }
 }
