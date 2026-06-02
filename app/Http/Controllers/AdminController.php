@@ -222,8 +222,7 @@ class AdminController extends Controller
             'solicitudVisitantes.qr',
         ])
         ->where('id_estado_solicitud', 8) // Solo finalizadas
-        ->where('id_tipo_solicitud', 3) // Ajusta el ID según tu BD para tipo "Consulta"
-        ->whereNull('id_solicitante'); // Solo citas sin anfitrión (sin host)
+        ->where('id_tipo_solicitud', 3); // Ajusta el ID según tu BD para tipo "Consulta"
 
         if ($buscar) {
             $query->where(function ($q) use ($buscar) {
@@ -231,6 +230,9 @@ class AdminController extends Controller
                   ->orWhereHas('visitantes', fn($qv) =>
                       $qv->where('nombre', 'like', "%{$buscar}%")
                          ->orWhere('apellidos', 'like', "%{$buscar}%")
+                  )
+                  ->orWhereHas('solicitante', fn($qs) =>
+                      $qs->where('name', 'like', "%{$buscar}%")
                   );
             });
         }

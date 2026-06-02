@@ -289,7 +289,12 @@ class SolicitudApiController extends Controller
 
         return response()->json(['message' => 'Solicitud obtenida correctamente.', 'data' => $solicitud]);
     }
-    
+
+
+
+
+    //---------------------------------------
+
     public function cancelar($id)
     {
         $solicitud = Solicitud::with(['solicitudVisitantes.qr', 'solicitudVisitantes.visitante'])->findOrFail($id);
@@ -323,6 +328,22 @@ class SolicitudApiController extends Controller
                 \Illuminate\Support\Facades\Log::error('Error enviando correo cancelacion API: ' . $e->getMessage());
             }
         }
+
+        $solicitud = Solicitud::with(['estado', 'tipo', 'visitantes', 'solicitante', 'solicitudVisitantes.qr'])->findOrFail($id);
+
+        $solicitudData = $solicitud->toArray();
+        $solicitudData['correo_cancelacion'] = true;
+
+        return response()->json([
+            'message'            => 'Solicitud cancelada correctamente.',
+            'correo_cancelacion' => true,
+            'data'               => $solicitudData,
+        ]);
+    }
+
+
+//------------------------------------
+
 
         $solicitud = Solicitud::with(['estado', 'tipo', 'visitantes', 'solicitante', 'solicitudVisitantes.qr'])->findOrFail($id);
 

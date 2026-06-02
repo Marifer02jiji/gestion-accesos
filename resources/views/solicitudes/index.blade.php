@@ -39,7 +39,7 @@
             <select id="estadoFilter" style="width:200px;"
                 class="border border-omg-kashmir rounded px-3 py-2 bg-omg-chardon text-sm focus:outline-none focus:ring-2 focus:ring-omg-nile cursor-pointer"
                 onchange="window.location.href='{{ route('solicitudes.index') }}?estado=' + this.value">
-                <option value="">📋 Todas las Solicitudes</option>
+                <option value=""> Todas las Solicitudes</option>
                 <option value="1" {{ ($estado ?? '') == '1' ? 'selected' : '' }}> Pendiente</option>
                 <option value="2" {{ ($estado ?? '') == '2' ? 'selected' : '' }}> Autorizada</option>
                 <option value="3" {{ ($estado ?? '') == '3' ? 'selected' : '' }}> Rechazada</option>
