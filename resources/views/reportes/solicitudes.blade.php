@@ -167,7 +167,13 @@
                     </td>
                     <td class="px-4 py-2">{{ $s->solicitante->name ?? 'N/A' }}</td>
                     <td class="px-4 py-2">
-                        {{ $s->id_autorizador ? $s->nombreAutorizador() : '—' }}
+                        @php $infoAutorizador = $s->infoAutorizador(); @endphp
+                        <span>{{ $infoAutorizador['texto'] }}</span>
+                        @if($infoAutorizador['motivo'])
+                            <span class="block text-xs text-orange-600 mt-0.5" title="{{ $infoAutorizador['motivo'] }}">
+                                <i class="fas fa-info-circle"></i> {{ $infoAutorizador['motivo'] }}
+                            </span>
+                        @endif
                     </td>
                     <td class="px-4 py-2">
                         {{ \Carbon\Carbon::parse($s->fecha_inicio)->format('d/m/Y H:i') }}

@@ -31,31 +31,62 @@
                     <i class="fas fa-plus"></i> Nueva Solicitud
                 </a>
             </div>
-        {{-- Filtro por estado - sin botón --}}
-        <div class="mb-4">
-            <label class="block text-xs font-semibold text-omg-slate mb-2">
-                <i class="fas fa-filter mr-1"></i> Filtrar por Estado
-            </label>
-            <select id="estadoFilter" style="width:200px;"
-                class="border border-omg-kashmir rounded px-3 py-2 bg-omg-chardon text-sm focus:outline-none focus:ring-2 focus:ring-omg-nile cursor-pointer"
-                onchange="window.location.href='{{ route('solicitudes.index') }}?estado=' + this.value">
-                <option value=""> Todas las Solicitudes</option>
-                <option value="1" {{ ($estado ?? '') == '1' ? 'selected' : '' }}> Pendiente</option>
-                <option value="2" {{ ($estado ?? '') == '2' ? 'selected' : '' }}> Autorizada</option>
-                <option value="3" {{ ($estado ?? '') == '3' ? 'selected' : '' }}> Rechazada</option>
-                <option value="4" {{ ($estado ?? '') == '4' ? 'selected' : '' }}> Cancelada</option>
-                <option value="5" {{ ($estado ?? '') == '5' ? 'selected' : '' }}> En Institución</option>
-                <option value="6" {{ ($estado ?? '') == '6' ? 'selected' : '' }}> En Encuentro</option>
-                <option value="7" {{ ($estado ?? '') == '7' ? 'selected' : '' }}> En Tránsito</option>
-                <option value="8" {{ ($estado ?? '') == '8' ? 'selected' : '' }}> Finalizada</option>
-            </select>
-        </div>
+            <form method="GET" action="{{ route('solicitudes.index') }}" class="mb-6">
+                <div class="flex gap-3 items-end flex-wrap">
+                    <div>
+                        <label class="block text-xs font-semibold text-omg-slate mb-1">
+                            <i class="fas fa-filter mr-1"></i> Estado
+                        </label>
+                        <select name="estado"
+                            class="border border-omg-kashmir rounded px-3 py-1 bg-omg-chardon text-sm focus:outline-none"
+                            style="width: 180px;">
+                            <option value="">Todas</option>
+                            <option value="1" {{ ($estado ?? '') == '1' ? 'selected' : '' }}>Pendiente</option>
+                            <option value="2" {{ ($estado ?? '') == '2' ? 'selected' : '' }}>Autorizada</option>
+                            <option value="3" {{ ($estado ?? '') == '3' ? 'selected' : '' }}>Rechazada</option>
+                            <option value="4" {{ ($estado ?? '') == '4' ? 'selected' : '' }}>Cancelada</option>
+                            <option value="5" {{ ($estado ?? '') == '5' ? 'selected' : '' }}>En Institución</option>
+                            <option value="6" {{ ($estado ?? '') == '6' ? 'selected' : '' }}>En Encuentro</option>
+                            <option value="7" {{ ($estado ?? '') == '7' ? 'selected' : '' }}>En Tránsito</option>
+                            <option value="8" {{ ($estado ?? '') == '8' ? 'selected' : '' }}>Finalizada</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-omg-slate mb-1">
+                            <i class="fas fa-envelope mr-1"></i> Visita (correo)
+                        </label>
+                        <input type="text" name="correo" value="{{ $correo ?? '' }}"
+                            placeholder="Correo del visitante"
+                            class="border border-omg-kashmir rounded px-3 py-1 bg-omg-chardon text-sm focus:outline-none"
+                            style="width: 200px;">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-omg-slate mb-1">
+                            <i class="fas fa-calendar mr-1"></i> Fecha
+                        </label>
+                        <input type="date" name="fecha" value="{{ $fecha ?? '' }}"
+                            class="border border-omg-kashmir rounded px-3 py-1 bg-omg-chardon text-sm focus:outline-none"
+                            style="width: 140px;">
+                    </div>
+                    <button type="submit"
+                        class="text-white px-3 py-1 rounded-lg hover:opacity-90 text-sm font-semibold flex items-center gap-1"
+                        style="background-color: #DA7E2D;">
+                        <i class="fas fa-search"></i> Filtrar
+                    </button>
+                    <a href="{{ route('solicitudes.index') }}"
+                        class="text-white px-3 py-1 rounded-lg hover:opacity-90 text-sm font-semibold flex items-center gap-1"
+                        style="background-color: #A9AAAD;">
+                        <i class="fas fa-times"></i> Limpiar
+                    </a>
+                </div>
+            </form>
 
             {{-- Tabla --}}
             <table class="w-full text-sm text-left border">
                 <thead class="text-white" style="background-color: #E26A23;">
                     <tr>
                         <th class="px-4 py-2">#</th>
+                        <th class="px-4 py-2">Visitante</th>
                         <th class="px-4 py-2">Fecha</th>
                         <th class="px-4 py-2">Lugar</th>
                         <th class="px-4 py-2">Motivo</th>
@@ -71,6 +102,11 @@
                         onmouseout="this.style.backgroundColor='transparent'">
                         <td class="px-4 py-2 font-mono text-xs" style="color: #DA7E2D;">
                             {{ $s->folio ?? $s->id_solicitud }}
+                        </td>
+                        <td class="px-4 py-2">
+                            @foreach($s->visitantes as $v)
+                                <p class="font-semibold text-omg-slate">{{ $v->nombre }} {{ $v->apellidos }}</p>
+                            @endforeach
                         </td>
                         <td class="px-4 py-2">
                             {{ \Carbon\Carbon::parse($s->fecha_inicio)->format('d/m/Y H:i') }}
@@ -144,7 +180,7 @@
                     </tr>
                     @empty
                     <tr>
-                        <td colspan="6" class="text-center px-4 py-8">
+                        <td colspan="7" class="text-center px-4 py-8">
                             <div class="flex flex-col items-center gap-2 text-gray-400">
                                 <i class="fas fa-folder-open text-4xl"></i>
                                 <p class="font-semibold">No se encontraron registros</p>

@@ -87,7 +87,36 @@ class Solicitud extends Model
 
     public function nombreAutorizador(): string
     {
-        return $this->resolverAutorizador()?->name ?? '—';
+        return $this->infoAutorizador()['texto'];
+    }
+
+    /**
+     * @return array{texto: string, motivo: string|null}
+     */
+    public function infoAutorizador(): array
+    {
+        $estado = (int) $this->id_estado_solicitud;
+
+        if (!$this->id_autorizador) {
+            if (in_array($estado, [2, 5, 6, 7, 8], true)) {
+                return [
+                    'texto'  => '—',
+                    'motivo' => 'Autorizada sin registrar al autorizador en el sistema',
+                ];
+            }
+
+            return ['texto' => '—', 'motivo' => null];
+        }
+
+        $user = $this->resolverAutorizador();
+        if ($user) {
+            return ['texto' => $user->name, 'motivo' => null];
+        }
+
+        return [
+            'texto'  => '—',
+            'motivo' => 'El autorizador ya no está vinculado a un usuario del sistema',
+        ];
     }
 
     public function esVisitaEstandar(): bool

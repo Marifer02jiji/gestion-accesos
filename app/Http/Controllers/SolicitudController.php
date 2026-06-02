@@ -43,6 +43,8 @@ class SolicitudController extends Controller
     public function index(Request $request)
     {
         $estado = $request->get('estado');
+        $correo = $request->get('correo');
+        $fecha  = $request->get('fecha');
         $desde  = $request->get('desde');
         $hasta  = $request->get('hasta');
 
@@ -52,6 +54,11 @@ class SolicitudController extends Controller
         if ($estado) {
             $query->where('id_estado_solicitud', $estado);
         }
+
+        $query->filtrarPendientesAutorizador([
+            'correo' => $correo,
+            'fecha'  => $fecha,
+        ]);
 
         if ($desde) {
             $query->whereDate('fecha_inicio', '>=', $desde);
@@ -67,7 +74,7 @@ class SolicitudController extends Controller
             ->paginate(10)
             ->withQueryString();
 
-        return view('solicitudes.index', compact('solicitudes', 'estado', 'desde', 'hasta'));
+        return view('solicitudes.index', compact('solicitudes', 'estado', 'correo', 'fecha', 'desde', 'hasta'));
     }
 
     public function create()
