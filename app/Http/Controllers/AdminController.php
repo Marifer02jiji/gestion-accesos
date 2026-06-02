@@ -10,6 +10,31 @@ use Illuminate\Http\Request;
 
 class AdminController extends Controller
 {
+    private function idsVisitantesEnInstitucion(): array
+    {
+        return RegistroAcceso::query()
+            ->whereNotNull('hora_llegada_institucion')
+            ->whereNull('hora_salida_institucion')
+            ->whereHas('qr.solicitudVisitante')
+            ->with('qr.solicitudVisitante:id_solicitud_visitante,id_visitante')
+            ->get()
+            ->map(fn ($r) => $r->qr?->solicitudVisitante?->id_visitante)
+            ->filter()
+            ->unique()
+            ->values()
+            ->all();
+    }
+
+    private function visitanteEstaEnInstitucion(int $idVisitante): bool
+    {
+        return RegistroAcceso::whereHas('qr.solicitudVisitante', function ($q) use ($idVisitante) {
+            $q->where('id_visitante', $idVisitante);
+        })
+            ->whereNotNull('hora_llegada_institucion')
+            ->whereNull('hora_salida_institucion')
+            ->exists();
+    }
+
     public function reportes()
     {
         $totalSolicitudes   = Solicitud::count();
@@ -36,6 +61,11 @@ class AdminController extends Controller
             'id_visitante'     => 'required|exists:visitante,id_visitante',
             'motivo_exclusion' => 'required|string|min:10',
         ]);
+
+        if ($this->visitanteEstaEnInstitucion((int) $request->id_visitante)) {
+            return redirect()->route('admin.exclusiones')
+                ->with('error', 'No se puede excluir al visitante mientras se encuentra en la institución.');
+        }
 
         ListaExclusion::create([
             'id_visitante'     => $request->id_visitante,
@@ -128,7 +158,9 @@ class AdminController extends Controller
         $visitantes = Visitante::whereNotIn(
             'id_visitante',
             ListaExclusion::pluck('id_visitante')
-        )->get();
+        )
+            ->whereNotIn('id_visitante', $this->idsVisitantesEnInstitucion())
+            ->get();
 
         return view('admin.exclusiones', compact(
             'exclusiones', 'visitantes', 'buscar', 'desde', 'hasta'

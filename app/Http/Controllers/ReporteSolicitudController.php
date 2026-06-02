@@ -17,14 +17,14 @@ class ReporteSolicitudController extends Controller
             'estado'      => $request->get('estado'),
             'solicitante' => $request->get('solicitante'),
             'autorizador' => $esAdmin ? $request->get('autorizador') : null,
-            'fecha'       => $request->get('fecha'),
-            'hora'        => $request->get('hora'),
+            'fecha'       => $esAdmin ? $request->get('fecha') : null,
+            'hora'        => $esAdmin ? $request->get('hora') : null,
             'tipo'        => $request->get('tipo'),
             'desde'       => $request->get('desde'),
             'hasta'       => $request->get('hasta'),
         ];
 
-        $query = Solicitud::with(['estado', 'tipo', 'visitantes', 'solicitante', 'autorizador']);
+        $query = Solicitud::with(['estado', 'tipo', 'visitantes', 'solicitante', 'autorizador', 'solicitudVisitantes.qr']);
 
         if (!$esAdmin) {
             $query->where('id_autorizador', Auth::user()->idSam());

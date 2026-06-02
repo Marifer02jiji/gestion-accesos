@@ -77,6 +77,7 @@
                     </select>
                 </div>
 
+                @if($esAdmin)
                 <div>
                     <label class="block text-xs font-semibold text-omg-slate mb-1">
                         <i class="fas fa-calendar mr-1"></i> Fecha de visita
@@ -94,6 +95,7 @@
                         class="border border-omg-kashmir rounded px-3 py-1 bg-omg-chardon text-sm focus:outline-none"
                         style="width: 130px;">
                 </div>
+                @endif
 
                 <div>
                     <label class="block text-xs font-semibold text-omg-slate mb-1">
@@ -136,6 +138,7 @@
         </p>
         @endif
 
+        @if($esAdmin)
         <table class="w-full text-sm text-left border">
             <thead class="text-white" style="background-color: #E26A23;">
                 <tr>
@@ -198,6 +201,17 @@
                 @endforelse
             </tbody>
         </table>
+        @else
+            @forelse($solicitudes as $s)
+                <x-solicitud-visita-card :s="$s" />
+            @empty
+            <div class="text-center py-8 text-gray-400">
+                <i class="fas fa-folder-open text-4xl mb-2 block"></i>
+                <p class="font-semibold">No se encontraron registros</p>
+                <p class="text-sm">Intenta ajustar los filtros de búsqueda</p>
+            </div>
+            @endforelse
+        @endif
 
         <div class="mt-4">
             {{ $solicitudes->links() }}

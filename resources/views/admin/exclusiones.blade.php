@@ -11,23 +11,24 @@
             </div>
         @endif
 
+        @if(session('error'))
+            <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded flex items-center gap-2">
+                <i class="fas fa-exclamation-circle"></i> {{ session('error') }}
+            </div>
+        @endif
+
         {{-- Encabezado con botón regresar --}}
         <div class="flex justify-between items-center">
             <h2 class="text-2xl font-bold text-omg-slate flex items-center gap-2">
                 <i class="fas fa-shield-alt" style="color: #DA7E2D;"></i> Gestión de Lista de Exclusión
             </h2>
             <div class="flex gap-2">
-                <a href="{{ route('admin.visitantes-activos') }}"
-                   class="text-white px-4 py-2 rounded hover:opacity-90 font-heading font-semibold flex items-center gap-2 text-sm"
-                   style="background-color: #9ABBC9;">
-                    <i class="fas fa-user-check"></i> Visitantes Activos
-                </a>
                 <a href="{{ route('admin.todas-solicitudes') }}"
                    class="text-white px-4 py-2 rounded hover:opacity-90 font-heading font-semibold flex items-center gap-2 text-sm"
                    style="background-color: #DA7E2D;">
                     <i class="fas fa-list-check"></i> Todas Solicitudes
                 </a>
-                <a href="{{ route('admin.reportes') }}"
+                <a href="{{ route('dashboard') }}"
                    class="text-white px-4 py-2 rounded hover:opacity-90 font-heading font-semibold flex items-center gap-2"
                    style="background-color: #3B5675;">
                     <i class="fas fa-arrow-left"></i> Regresar
