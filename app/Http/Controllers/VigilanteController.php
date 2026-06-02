@@ -63,6 +63,19 @@ class VigilanteController extends Controller
                 ->with('error', 'El código QR ha expirado o aún no es válido.');
         }
 
+        // Verificar si el visitante está en la lista de exclusión
+        $visitante = $qr->solicitudVisitante->visitante;
+        $enExclusion = \App\Models\ListaExclusion::where('id_visitante', $visitante->id_visitante)
+            ->exists();
+
+        if ($enExclusion) {
+            // Deshabilitar el QR
+            $qr->update(['id_estadoQr' => 4]);
+            
+            return redirect()->route('vigilante.index')
+                ->with('error', "El visitante {$visitante->nombre} {$visitante->apellidos} está en la lista de exclusión. Acceso denegado.");
+        }
+
         return view('vigilante.resultado', compact('qr'));
     }
 
@@ -98,11 +111,26 @@ class VigilanteController extends Controller
                 ->with('error', 'No se encontró entrada registrada para este QR.');
         }
 
+        // Obtener la solicitud para verificar estados
+        $solicitud = $registro->qr->solicitudVisitante->solicitud;
+        $visitante = $registro->qr->solicitudVisitante->visitante;
+
         RegistroAcceso::registrarSalidaInstitucional(
             $registro,
             (string) session('vigilante_telefono'),
             (string) session('vigilante_area')
         );
+
+        // Verificar si no se marcaron los dos estados (llegada y salida del encuentro)
+        if (!$solicitud->hora_llegada_encuentro || !$solicitud->hora_salida_encuentro) {
+            \App\Models\Notificacion::create([
+                'id_empleado'  => $solicitud->id_solicitante,
+                'id_solicitud' => $solicitud->id_solicitud,
+                'tipo'         => 'alerta',
+                'mensaje'      => "El visitante {$visitante->nombre} {$visitante->apellidos} salió sin marcar los estados de llegada/salida del encuentro. Folio: {$solicitud->folio}",
+                'leida'        => false,
+            ]);
+        }
 
         return redirect()->route('vigilante.index')
             ->with('success', 'Salida registrada correctamente.');

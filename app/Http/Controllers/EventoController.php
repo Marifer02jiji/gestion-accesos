@@ -45,7 +45,7 @@ class EventoController extends Controller
                     return;
                 }
             }],
-            'numero_personas'    => 'required|integer|min:1',
+            'numero_personas'    => 'required|integer|min:1|max:1000',
             'correo_responsable' => 'required|email|max:150',
             'nombre_responsable' => 'required|string|max:150',
         ]);
@@ -69,7 +69,7 @@ class EventoController extends Controller
         $qr = QR::create([
             'codigo_numerico'        => $evento->folio,
             'vigencia_inicio'        => \Carbon\Carbon::parse($evento->fecha_evento)->subMinutes((int) $request->tolerancia_antes),
-            'vigencia_final'         => \Carbon\Carbon::parse($evento->fecha_evento)->addMinutes((int) $request->tolerancia_despues),           
+            'vigencia_final'         => \Carbon\Carbon::parse($evento->fecha_evento)->addMinutes((int) $request->tolerancia_despues),
             'prorroga_tolerancia'    => false,
             'id_estadoQr'            => 1,
             'id_solicitud_visitante' => null,
@@ -93,6 +93,32 @@ class EventoController extends Controller
     {
         $evento = Evento::with('qr')->findOrFail($id);
         return view('eventos.show', compact('evento'));
+    }
+
+    public function edit($id)
+    {
+        $evento = Evento::findOrFail($id);
+        return view('eventos.edit', compact('evento'));
+    }
+
+    public function update(Request $request, $id)
+    {
+        $evento = Evento::findOrFail($id);
+
+        $request->validate([
+            'numero_personas'    => 'required|integer|min:1|max:1000',
+            'nombre_responsable' => 'required|string|max:150',
+            'correo_responsable' => 'required|email|max:150',
+        ]);
+
+        $evento->update([
+            'numero_personas'    => $request->numero_personas,
+            'nombre_responsable' => $request->nombre_responsable,
+            'correo_responsable' => $request->correo_responsable,
+        ]);
+
+        return redirect()->route('eventos.show', $evento->id_evento)
+            ->with('success', 'Evento actualizado correctamente.');
     }
 
     public function reenviarQR($id)

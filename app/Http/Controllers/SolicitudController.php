@@ -10,6 +10,7 @@ use App\Models\Solicitud;
 use App\Models\SolicitudVisitante;
 use App\Models\User;
 use App\Models\Visitante;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
@@ -38,15 +39,34 @@ class SolicitudController extends Controller
         }
     }
 
-    public function index()
+    public function index(Request $request)
     {
-        $solicitudes = Solicitud::where('id_solicitante', $this->idEmpleado())
-            ->with(['estado', 'tipo', 'visitantes'])
+        $estado = $request->get('estado');
+        $desde  = $request->get('desde');
+        $hasta  = $request->get('hasta');
+
+        $query = Solicitud::where('id_solicitante', $this->idEmpleado())
+            ->with(['estado', 'tipo', 'visitantes']);
+
+        if ($estado) {
+            $query->where('id_estado_solicitud', $estado);
+        }
+
+        if ($desde) {
+            $query->whereDate('fecha_inicio', '>=', $desde);
+        }
+
+        if ($hasta) {
+            $query->whereDate('fecha_inicio', '<=', $hasta);
+        }
+
+        $solicitudes = $query
             ->orderByRaw("CASE WHEN id_estado_solicitud IN (1,2,5,6,7) THEN 0 ELSE 1 END")
             ->orderBy('fecha_inicio', 'asc')
-            ->paginate(10);
+            ->paginate(10)
+            ->withQueryString();
 
-        return view('solicitudes.index', compact('solicitudes'));
+        return view('solicitudes.index', compact('solicitudes', 'estado', 'desde', 'hasta'));
     }
 
     public function create()

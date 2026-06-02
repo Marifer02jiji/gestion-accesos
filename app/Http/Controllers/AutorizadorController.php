@@ -152,4 +152,48 @@ class AutorizadorController extends Controller
         return redirect()->route('autorizador.index')
             ->with('success', 'Solicitud rechazada correctamente.');
     }
+
+    public function historial(Request $request)
+    {
+        $filtro = $request->get('filtro', 'todas');
+        $desde  = $request->get('desde');
+        $hasta  = $request->get('hasta');
+
+        $query = Solicitud::where('id_autorizador', $this->idEmpleado())
+            ->where('id_estado_solicitud', '!=', 1) // No incluir pendientes
+            ->with(['estado', 'tipo', 'visitantes', 'solicitante']);
+
+        // Aplicar filtro por estado
+        switch($filtro) {
+            case 'autorizadas':
+                $query->where('id_estado_solicitud', 2);
+                break;
+            case 'finalizadas':
+                $query->where('id_estado_solicitud', 8);
+                break;
+            case 'canceladas':
+                $query->where('id_estado_solicitud', 4);
+                break;
+            case 'rechazadas':
+                $query->where('id_estado_solicitud', 3);
+                break;
+            // 'todas' no aplica filtro adicional
+        }
+
+        // Aplicar filtro de fechas si existen
+        if ($desde) {
+            $query->whereDate('fecha_inicio', '>=', $desde);
+        }
+
+        if ($hasta) {
+            $query->whereDate('fecha_inicio', '<=', $hasta);
+        }
+
+        $solicitudes = $query
+            ->orderBy('fecha_inicio', 'desc')
+            ->paginate(15)
+            ->withQueryString();
+
+        return view('autorizador.historial', compact('solicitudes', 'filtro', 'desde', 'hasta'));
+    }
 }

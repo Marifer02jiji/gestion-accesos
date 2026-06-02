@@ -10,11 +10,18 @@
                 <h3 class="text-lg font-heading font-semibold flex items-center gap-2" style="color: #DA7E2D;">
                     <i class="fas fa-chart-line"></i> Visitas Finalizadas
                 </h3>
-                <a href="{{ route('admin.reportes') }}"
-                   class="text-white px-4 py-2 rounded hover:opacity-90 font-heading font-semibold flex items-center gap-2 text-sm"
-                   style="background-color: #3B5675;">
-                    <i class="fas fa-arrow-left"></i> Regresar
-                </a>
+                <div class="flex gap-2">
+                    <a href="{{ route('admin.citas-consulta') }}"
+                       class="text-white px-4 py-2 rounded hover:opacity-90 font-heading font-semibold flex items-center gap-2 text-sm"
+                       style="background-color: #DA7E2D;">
+                        <i class="fas fa-stethoscope"></i> Ver Citas Consulta
+                    </a>
+                    <a href="{{ route('admin.reportes') }}"
+                       class="text-white px-4 py-2 rounded hover:opacity-90 font-heading font-semibold flex items-center gap-2 text-sm"
+                       style="background-color: #3B5675;">
+                        <i class="fas fa-arrow-left"></i> Regresar
+                    </a>
+                </div>
             </div>
 
             {{-- Filtros --}}

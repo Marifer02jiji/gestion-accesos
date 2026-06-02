@@ -7,9 +7,9 @@ use App\Http\Controllers\VigilanteController;
 use App\Http\Controllers\AdminController;
 use App\Http\Controllers\NotificacionController;
 use App\Http\Controllers\EventoController;
+use App\Http\Controllers\ResetPasswordController;
 use App\Models\QR;
 use Illuminate\Support\Facades\Route;
-
 
 Route::get('/', function () {
     return redirect()->route('dashboard');
@@ -39,6 +39,7 @@ Route::middleware(['auth', 'role:solicitante'])->group(function () {
 // Rutas Autorizador
 Route::middleware(['auth', 'role:autorizador'])->group(function () {
     Route::get('/autorizador', [AutorizadorController::class, 'index'])->name('autorizador.index');
+    Route::get('/autorizador/historial', [AutorizadorController::class, 'historial'])->name('autorizador.historial');
     Route::post('/autorizador/{id}/autorizar', [AutorizadorController::class, 'autorizar'])->name('autorizador.autorizar');
     Route::post('/autorizador/{id}/rechazar', [AutorizadorController::class, 'rechazar'])->name('autorizador.rechazar');
 });
@@ -57,12 +58,14 @@ Route::middleware(['auth', 'role:vigilante'])->group(function () {
 // Rutas Administrador
 Route::middleware(['auth', 'role:administrador'])->group(function () {
     Route::get('/admin/reportes', [AdminController::class, 'reportes'])->name('admin.reportes');
+    Route::get('/admin/todas-solicitudes', [AdminController::class, 'todasLasSolicitudes'])->name('admin.todas-solicitudes');
+    Route::get('/admin/reporte-visitas', [AdminController::class, 'reporteVisitas'])->name('admin.reporte-visitas');
+    Route::get('/admin/citas-consulta', [AdminController::class, 'citasConsulta'])->name('admin.citas-consulta');
     Route::get('/admin/exclusiones', [AdminController::class, 'exclusiones'])->name('admin.exclusiones');
     Route::post('/admin/exclusiones', [AdminController::class, 'storeExclusion'])->name('admin.exclusiones.store');
     Route::delete('/admin/exclusiones/{id}', [AdminController::class, 'destroyExclusion'])->name('admin.exclusiones.destroy');
     Route::get('/admin/visitantes-activos', [AdminController::class, 'visitantesActivos'])->name('admin.visitantes-activos');
     Route::post('/admin/registrar-salida', [AdminController::class, 'registrarSalida'])->name('admin.registrarSalida');
-    Route::get('/admin/reporte-visitas', [AdminController::class, 'reporteVisitas'])->name('admin.reporte-visitas');
 });
 
 // Rutas Organizador
@@ -88,6 +91,11 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/notificaciones/{id}/leida', [NotificacionController::class, 'marcarLeida'])->name('notificaciones.leida');
     Route::post('/notificaciones/todas-leidas', [NotificacionController::class, 'marcarTodasLeidas'])->name('notificaciones.todas-leidas');
     Route::delete('/notificaciones/{id}', [NotificacionController::class, 'eliminar'])->name('notificaciones.eliminar');
-    Route::delete('/notificaciones', [NotificacionController::class, 'eliminarTodas'])->name('notificaciones.eliminarTodas');});
+    Route::delete('/notificaciones', [NotificacionController::class, 'eliminarTodas'])->name('notificaciones.eliminarTodas');
+});
 
 require __DIR__.'/auth.php';
+
+// Reset contraseña simple — DEBE ir después del require para evitar conflictos
+Route::get('/recuperar-contrasena', [ResetPasswordController::class, 'show'])->name('password.reset.simple');
+Route::post('/recuperar-contrasena', [ResetPasswordController::class, 'reset'])->name('password.reset.simple.post');

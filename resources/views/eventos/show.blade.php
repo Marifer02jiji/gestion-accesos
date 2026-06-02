@@ -97,6 +97,12 @@
                 <i class="fas fa-arrow-left"></i> Regresar
             </a>
 
+            <a href="{{ route('eventos.edit', $evento->id_evento) }}"
+               class="text-white px-4 py-2 rounded hover:opacity-90 font-heading font-semibold flex items-center gap-2"
+               style="background-color: #9ABBC9;">
+                <i class="fas fa-edit"></i> Editar
+            </a>
+
             @if($evento->qr)
                 <form action="{{ route('eventos.reenviarQR', $evento->id_evento) }}" method="POST"
                     onsubmit="return confirm('¿Reenviar el QR al responsable?')">

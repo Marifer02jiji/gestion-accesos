@@ -1,6 +1,19 @@
 <x-app-layout>
     <x-slot name="header">
-        Solicitudes
+        Solicitudes 
+        @if($filtro == 'pendientes')
+            <span class="bg-yellow-500 text-white px-2 py-1 rounded-full text-xs font-bold ml-2">
+                Pendientes de Autorización
+            </span>
+        @elseif($filtro == 'aprobadas')
+            <span class="bg-green-500 text-white px-2 py-1 rounded-full text-xs font-bold ml-2">
+                Autorizadas
+            </span>
+        @elseif($filtro == 'rechazadas')
+            <span class="bg-red-500 text-white px-2 py-1 rounded-full text-xs font-bold ml-2">
+                Rechazadas
+            </span>
+        @endif
     </x-slot>
 
     <div>
@@ -18,7 +31,18 @@
 
         <div class="bg-white shadow-sm rounded-lg p-6">
 
-            {{-- Filtros --}}
+            {{-- Barra superior con botón de historial --}}
+            <div class="flex justify-between items-center mb-6">
+                <h3 class="text-lg font-heading font-semibold text-omg-slate flex items-center gap-2">
+                    <i class="fas fa-list" style="color: #DA7E2D;"></i>
+                    Solicitudes para Autorizar
+                </h3>
+                <a href="{{ route('autorizador.historial') }}"
+                   class="text-white px-4 py-2 rounded hover:opacity-90 font-heading font-semibold flex items-center gap-2"
+                   style="background-color: #3B5675;">
+                    <i class="fas fa-history"></i> Ver Historial
+                </a>
+            </div>
             <div class="flex items-center gap-3 mb-6 flex-wrap">
                 <span class="font-heading font-semibold text-omg-slate text-sm flex items-center gap-1">
                     <i class="fas fa-filter"></i> Filtrar:
