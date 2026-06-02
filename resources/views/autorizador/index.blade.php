@@ -30,7 +30,7 @@
                 <a href="{{ route('autorizador.reportes') }}"
                    class="text-white px-4 py-2 rounded hover:opacity-90 font-heading font-semibold flex items-center gap-2"
                    style="background-color: #3B5675;">
-                    <i class="fas fa-chart-bar"></i> Reportes
+                    <i class="fas fa-check-circle"></i> Mis solicitudes autorizadas
                 </a>
             </div>
             <form method="GET" action="{{ route('autorizador.index') }}" class="mb-6">

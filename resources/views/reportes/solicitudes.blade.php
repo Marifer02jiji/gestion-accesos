@@ -7,7 +7,7 @@
 
         <div class="flex justify-between items-center mb-6">
             <h3 class="text-lg font-heading font-semibold text-omg-slate flex items-center gap-2">
-                <i class="fas fa-chart-bar" style="color: #DA7E2D;"></i>
+                <i class="fas {{ $esAdmin ? 'fa-chart-bar' : 'fa-check-circle' }}" style="color: #DA7E2D;"></i>
                 {{ $tituloPagina }}
             </h3>
             <a href="{{ $rutaRegresar }}"

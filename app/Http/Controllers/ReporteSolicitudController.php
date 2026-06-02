@@ -41,7 +41,7 @@ class ReporteSolicitudController extends Controller
 
         $rutaReportes  = $esAdmin ? route('admin.todas-solicitudes') : route('autorizador.reportes');
         $rutaRegresar  = $esAdmin ? route('admin.reportes') : route('autorizador.index');
-        $tituloPagina  = $esAdmin ? 'Reporte de Solicitudes' : 'Mis Reportes de Solicitudes';
+        $tituloPagina  = $esAdmin ? 'Reporte de Solicitudes' : 'Mis solicitudes autorizadas';
 
         return view('reportes.solicitudes', compact(
             'solicitudes', 'filtros', 'tipos', 'esAdmin', 'rutaReportes', 'rutaRegresar', 'tituloPagina'
