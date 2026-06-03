@@ -1,6 +1,29 @@
 <?php
-
 namespace App\Http\Controllers\Api;
+
+<<<<<<< HEAD
+namespace App\Http\Controllers\Api;
+=======
+/**
+ * Empresa:     OMEGA Solutions
+ * Proyecto:    ProyectoC - Sistema de Gestión de Accesos y Visitas
+ * Archivo:     app/Http/Controllers/Api/SolicitudApiController.php
+ * Creación:    19/03/2026
+ * Creado por:  Jacqueline Marifer Escobar Espinoza
+ * Aprobado por: Líder de Área
+ *
+ * Changelog:
+ * ID: 1 | Fecha: 19/03/2026 | Modificado por: Jacqueline Marifer Escobar Espinoza | Descripción: Creación inicial API REST para solicitudes con Sanctum
+ * ID: 2 | Fecha: 07/05/2026 | Modificado por: Jacqueline Marifer Escobar Espinoza | Descripción: Validación de horarios L-V 7-21h, Sáb hasta 14h, no domingos
+ * ID: 3 | Fecha: 19/05/2026 | Modificado por: Jacqueline Marifer Escobar Espinoza | Descripción: Implementar enviarQR, reenviarQR y extenderQR
+ * ID: 4 | Fecha: 28/05/2026 | Modificado por: Jacqueline Marifer Escobar Espinoza | Descripción: Agregar confirmarLlegada y confirmarSalida de encuentro
+ * ID: 5 | Fecha: 01/06/2026 | Modificado por: Jacqueline Marifer Escobar Espinoza | Descripción: Fix cancelar solicitud con envío de correo al visitante
+ * ID: 6 | Fecha: 02/06/2026 | Modificado por: Jacqueline Marifer Escobar Espinoza | Descripción: Agregar campo correo_cancelacion en respuesta para Flutter
+ * ID: 7 | Fecha: 02/06/2026 | Modificado por: Jacqueline Marifer Escobar Espinoza | Descripción: Fix eliminar código duplicado fuera de métodos (ParseError línea 348)
+ *
+ * Descripción: API REST para la gestión móvil de solicitudes, permitiendo a los usuarios anfitriones y autorizadores operar desde la aplicación Flutter.
+ */
+>>>>>>> 90156fc (cambios de evt a vis)
 
 use App\Http\Controllers\Controller;
 use App\Rules\AnticipacionMinimaVisita;
@@ -12,6 +35,10 @@ use App\Models\Visitante;
 use App\Mail\EnviarQRMail;
 use App\Services\AutorizacionVisitaService;
 use App\Services\FlujoAccesoService;
+<<<<<<< HEAD
+=======
+use App\Services\ListaExclusionVisitaService;
+>>>>>>> 90156fc (cambios de evt a vis)
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -21,8 +48,18 @@ use Illuminate\Support\Facades\Mail;
 class SolicitudApiController extends Controller
 {
     public function __construct(
+<<<<<<< HEAD
         private readonly AutorizacionVisitaService $autorizacionVisita
+=======
+        private readonly AutorizacionVisitaService $autorizacionVisita,
+        private readonly ListaExclusionVisitaService $listaExclusion,
+>>>>>>> 90156fc (cambios de evt a vis)
     ) {
+    }
+
+    private function extensionTiempo(): \App\Services\SolicitudExtensionTiempoService
+    {
+        return app(\App\Services\SolicitudExtensionTiempoService::class);
     }
 
     private function idEmpleado(): int
@@ -440,6 +477,7 @@ class SolicitudApiController extends Controller
             return response()->json(['message' => 'Los minutos extra deben ser mayores a cero.', 'data' => null], 422);
         }
 
+<<<<<<< HEAD
         $extendidos = 0;
         foreach ($solicitud->solicitudVisitantes as $sv) {
             if ($sv->qr && in_array($sv->qr->id_estadoQr, [1, 2])) {
@@ -452,6 +490,47 @@ class SolicitudApiController extends Controller
         }
 
         return response()->json(['message' => "QR extendido {$minutos} minutos para {$extendidos} visitante(s).", 'data' => ['minutos_extra' => $minutos, 'extendidos' => $extendidos]]);
+=======
+        try {
+            $minutos = SolicitudExtensionTiempoService::normalizarMinutosExtra(
+                (int) $request->input(
+                    'minutos_extra',
+                    SolicitudExtensionTiempoService::MINUTOS_EXTRA_DEFECTO
+                )
+            );
+            $data = $this->extensionTiempo()->autorizar($solicitud, $minutos, $this->idEmpleado());
+
+            return response()->json([
+                'message' => "QR extendido {$minutos} minutos para {$data['extendidos']} visitante(s).",
+                'data'    => $data,
+            ]);
+        } catch (\InvalidArgumentException $e) {
+            return response()->json(['message' => $e->getMessage(), 'data' => null], 422);
+        }
+    }
+
+    public function rechazarExtension($id)
+    {
+        $solicitud = Solicitud::findOrFail($id);
+
+        if ((int) $solicitud->id_solicitante !== $this->idEmpleado()) {
+            return response()->json([
+                'message' => 'Solo el solicitante puede rechazar la extension.',
+                'data'    => null,
+            ], 403);
+        }
+
+        try {
+            $this->extensionTiempo()->rechazar($solicitud, $this->idEmpleado());
+
+            return response()->json([
+                'message' => 'Extension de tiempo denegada. Se notifico al visitante por correo.',
+                'data'    => null,
+            ]);
+        } catch (\InvalidArgumentException $e) {
+            return response()->json(['message' => $e->getMessage(), 'data' => null], 422);
+        }
+>>>>>>> 90156fc (cambios de evt a vis)
     }
 
     public function activas(Request $request)

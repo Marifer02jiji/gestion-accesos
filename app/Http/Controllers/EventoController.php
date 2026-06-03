@@ -65,9 +65,9 @@ class EventoController extends Controller
             'id_estado_solicitud' => 2,
         ]);
 
-        // Generar QR con tolerancia
+        // Generar QR con tolerancia (mismo formato VIS-XXXX-XXXX que las visitas)
         $qr = QR::create([
-            'codigo_numerico'        => $evento->folio,
+            'codigo_numerico'        => QR::generarCodigo(),
             'vigencia_inicio'        => \Carbon\Carbon::parse($evento->fecha_evento)->subMinutes((int) $request->tolerancia_antes),
             'vigencia_final'         => \Carbon\Carbon::parse($evento->fecha_evento)->addMinutes((int) $request->tolerancia_despues),
             'prorroga_tolerancia'    => false,
