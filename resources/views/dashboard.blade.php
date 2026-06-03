@@ -1,3 +1,16 @@
+{{--
+Empresa:     OMEGA Solutions
+Proyecto:    ProyectoC - Sistema de Gestión de Accesos y Visitas
+Archivo:     resources/views/dashboard.blade.php
+Creación:    19/03/2026
+Creado por:  Jacqueline Marifer Escobar Espinoza
+Aprobado por: Líder de Área
+
+Changelog:
+ID: 1 | Fecha: 19/03/2026 | Modificado por: Jacqueline Marifer Escobar Espinoza | Descripción: Creación inicial, panel de inicio con accesos directos por rol
+ID: 2 | Fecha: 07/05/2026 | Modificado por: Jacqueline Marifer Escobar Espinoza | Descripción: Agregar header con color azul institucional #3B5675
+--}}
+
 <x-app-layout>
     <x-slot name="header">
         <span style="color: #3B5675;">Dashboard</span>

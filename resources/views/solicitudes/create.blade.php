@@ -1,3 +1,18 @@
+{{--
+Empresa:     OMEGA Solutions
+Proyecto:    ProyectoC - Sistema de Gestión de Accesos y Visitas
+Archivo:     resources/views/solicitudes/create.blade.php
+Creación:    19/03/2026
+Creado por:  Jacqueline Marifer Escobar Espinoza
+Aprobado por: Líder de Área
+
+Changelog:
+ID: 1 | Fecha: 19/03/2026 | Modificado por: Jacqueline Marifer Escobar Espinoza | Descripción: Creación inicial del formulario de nueva solicitud
+ID: 2 | Fecha: 07/05/2026 | Modificado por: Jacqueline Marifer Escobar Espinoza | Descripción: Agregar catálogo filtrable de edificios con buscador dinámico
+ID: 3 | Fecha: 19/05/2026 | Modificado por: Jacqueline Marifer Escobar Espinoza | Descripción: Preservar datos con old() en caso de error de validación
+ID: 4 | Fecha: 28/05/2026 | Modificado por: Jacqueline Marifer Escobar Espinoza | Descripción: Validación de horarios L-V 7-21h, Sáb hasta 14h, sin domingos
+--}}
+
 <x-app-layout>
     <x-slot name="header">
         Nueva Solicitud de Visita

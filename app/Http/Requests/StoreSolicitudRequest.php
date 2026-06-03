@@ -1,5 +1,20 @@
 <?php
 
+/**
+ * Empresa:     OMEGA Solutions
+ * Proyecto:    ProyectoC - Sistema de Gestión de Accesos y Visitas
+ * Archivo:     app/Http/Requests/StoreSolicitudRequest.php
+ * Creación:    19/03/2026
+ * Creado por:  Jacqueline Marifer Escobar Espinoza
+ * Aprobado por: Líder de Área
+ *
+ * Changelog:
+ * ID: 1 | Fecha: 19/03/2026 | Modificado por: Jacqueline Marifer Escobar Espinoza | Descripción: Creación inicial, validación de campos de nueva solicitud
+ * ID: 2 | Fecha: 07/05/2026 | Modificado por: Jacqueline Marifer Escobar Espinoza | Descripción: Validación de horarios L-V 7-21h, Sáb hasta 14h, no domingos
+ * ID: 3 | Fecha: 28/05/2026 | Modificado por: Jacqueline Marifer Escobar Espinoza | Descripción: Agregar regla AnticipacionMinimaVisita de 1 hora
+ * ID: 4 | Fecha: 02/06/2026 | Modificado por: Jacqueline Marifer Escobar Espinoza | Descripción: Reactivar validación de días tras período de pruebas
+ */
+
 namespace App\Http\Requests;
 
 use App\Rules\AnticipacionMinimaVisita;

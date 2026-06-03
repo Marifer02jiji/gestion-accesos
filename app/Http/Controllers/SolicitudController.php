@@ -1,5 +1,24 @@
 <?php
 
+/**
+ * Empresa:     OMEGA Solutions
+ * Proyecto:    ProyectoC - Sistema de Gestión de Accesos y Visitas
+ * Archivo:     app/Http/Controllers/SolicitudController.php
+ * Creación:    19/03/2026
+ * Creado por:  Jacqueline Marifer Escobar Espinoza
+ * Aprobado por: Líder de Área
+ *
+ * Changelog:
+ * ID: 1 | Fecha: 19/03/2026 | Modificado por: Jacqueline Marifer Escobar Espinoza | Descripción: Creación inicial del controlador CRUD de solicitudes
+ * ID: 2 | Fecha: 07/05/2026 | Modificado por: Jacqueline Marifer Escobar Espinoza | Descripción: Implementación de cancelar solicitud con cambio de estado QR
+ * ID: 3 | Fecha: 19/05/2026 | Modificado por: Jacqueline Marifer Escobar Espinoza | Descripción: Agregar envío de QR por correo al visitante
+ * ID: 4 | Fecha: 28/05/2026 | Modificado por: Jacqueline Marifer Escobar Espinoza | Descripción: Implementar registrarLlegadaEncuentro y registrarSalidaEncuentro
+ * ID: 5 | Fecha: 31/05/2026 | Modificado por: Jacqueline Marifer Escobar Espinoza | Descripción: Agregar historial de visitas finalizadas
+ * ID: 6 | Fecha: 01/06/2026 | Modificado por: Jacqueline Marifer Escobar Espinoza | Descripción: Notificar a autorizadores al crear solicitud
+ * ID: 7 | Fecha: 01/06/2026 | Modificado por: Jacqueline Marifer Escobar Espinoza | Descripción: Envío de correo de cancelación al visitante con datos del anfitrión
+ * ID: 8 | Fecha: 02/06/2026 | Modificado por: Jacqueline Marifer Escobar Espinoza | Descripción: Fix cancelar disponible para estados Pendiente y Autorizada
+ */
+
 namespace App\Http\Controllers;
 
 use App\Http\Requests\StoreSolicitudRequest;

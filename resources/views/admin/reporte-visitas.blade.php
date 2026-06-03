@@ -1,3 +1,17 @@
+{{--
+Empresa:     OMEGA Solutions
+Proyecto:    ProyectoC - Sistema de Gestión de Accesos y Visitas
+Archivo:     resources/views/admin/reporte-visitas.blade.php
+Creación:    31/05/2026
+Creado por:  Jacqueline Marifer Escobar Espinoza
+Aprobado por: Líder de Área
+
+Changelog:
+ID: 1 | Fecha: 31/05/2026 | Modificado por: Jacqueline Marifer Escobar Espinoza | Descripción: Creación inicial, tarjetas por visita con timeline de movimientos
+ID: 2 | Fecha: 01/06/2026 | Modificado por: Jacqueline Marifer Escobar Espinoza | Descripción: Agregar filtros por folio, visitante, anfitrión y rango de fechas
+ID: 3 | Fecha: 02/06/2026 | Modificado por: Jacqueline Marifer Escobar Espinoza | Descripción: Agregar datos del vigilante teléfono y área de acceso de entrada y salida
+--}}
+
 <x-app-layout>
     <x-slot name="header">
         Reporte de Visitas

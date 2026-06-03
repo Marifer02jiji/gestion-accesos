@@ -1,5 +1,17 @@
 <?php
 
+/**
+ * Empresa:     OMEGA Solutions
+ * Proyecto:    ProyectoC - Sistema de Gestión de Accesos y Visitas
+ * Archivo:     app/Mail/SolicitudCanceladaMail.php
+ * Creación:    01/06/2026
+ * Creado por:  Jacqueline Marifer Escobar Espinoza
+ * Aprobado por: Líder de Área
+ *
+ * Changelog:
+ * ID: 1 | Fecha: 01/06/2026 | Modificado por: Jacqueline Marifer Escobar Espinoza | Descripción: Creación inicial, correo de cancelación al visitante con datos del anfitrión y QR desactivado
+ */
+
 namespace App\Mail;
 
 use App\Models\Solicitud;

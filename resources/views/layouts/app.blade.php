@@ -1,3 +1,19 @@
+{{--
+Empresa:     OMEGA Solutions
+Proyecto:    ProyectoC - Sistema de Gestión de Accesos y Visitas
+Archivo:     resources/views/layouts/app.blade.php
+Creación:    19/03/2026
+Creado por:  Jacqueline Marifer Escobar Espinoza
+Aprobado por: Líder de Área
+
+Changelog:
+ID: 1 | Fecha: 19/03/2026 | Modificado por: Jacqueline Marifer Escobar Espinoza | Descripción: Creación inicial del layout principal con navbar naranja corporativo
+ID: 2 | Fecha: 07/05/2026 | Modificado por: Jacqueline Marifer Escobar Espinoza | Descripción: Agregar modal de advertencia de inactividad 15 min con cuenta regresiva de 30 seg
+ID: 3 | Fecha: 19/05/2026 | Modificado por: Jacqueline Marifer Escobar Espinoza | Descripción: Agregar contador de notificaciones no leídas en navbar
+ID: 4 | Fecha: 28/05/2026 | Modificado por: Jacqueline Marifer Escobar Espinoza | Descripción: Implementar header con rol del usuario autenticado
+ID: 5 | Fecha: 01/06/2026 | Modificado por: Jacqueline Marifer Escobar Espinoza | Descripción: Ajuste de colores institucionales navbar #DA7E2D y header #E26A23
+--}}
+
 <!DOCTYPE html>
 <html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
     <head>

@@ -1,5 +1,17 @@
 <?php
 
+/**
+ * Empresa:     OMEGA Solutions
+ * Proyecto:    ProyectoC - Sistema de Gestión de Accesos y Visitas
+ * Archivo:     app/Console/Commands/NotificarToleranciaVencida.php
+ * Creación:    19/05/2026
+ * Creado por:  Jacqueline Marifer Escobar Espinoza
+ * Aprobado por: Líder de Área
+ *
+ * Changelog:
+ * ID: 1 | Fecha: 19/05/2026 | Modificado por: Jacqueline Marifer Escobar Espinoza | Descripción: Creación inicial, scheduler cada minuto para notificar tolerancia vencida y cancelar solicitud automáticamente
+ */
+
 namespace App\Console\Commands;
 
 use App\Models\Notificacion;

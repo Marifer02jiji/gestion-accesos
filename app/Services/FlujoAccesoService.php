@@ -1,4 +1,21 @@
 <?php
+
+/**
+ * Empresa:     OMEGA Solutions
+ * Proyecto:    ProyectoC - Sistema de Gestión de Accesos y Visitas
+ * Archivo:     app/Services/FlujoAccesoService.php
+ * Creación:    19/05/2026
+ * Creado por:  Jacqueline Marifer Escobar Espinoza
+ * Aprobado por: Líder de Área
+ *
+ * Changelog:
+ * ID: 1 | Fecha: 19/05/2026 | Modificado por: Jacqueline Marifer Escobar Espinoza | Descripción: Creación inicial, servicio de flujo de acceso con estados En Institución, En Encuentro, En Tránsito, Finalizada
+ * ID: 2 | Fecha: 28/05/2026 | Modificado por: Jacqueline Marifer Escobar Espinoza | Descripción: Implementar marcarEnInstitucion(), marcarFinalizada(), registrarLlegadaEncuentro(), registrarSalidaEncuentro()
+ * ID: 3 | Fecha: 31/05/2026 | Modificado por: Jacqueline Marifer Escobar Espinoza | Descripción: Agregar prepararSalidaVigilante() para autocompletar estados intermedios no marcados por anfitrión
+ * ID: 4 | Fecha: 01/06/2026 | Modificado por: Jacqueline Marifer Escobar Espinoza | Descripción: Agregar formatearVisitaActiva() para respuesta unificada en API móvil
+ * ID: 5 | Fecha: 02/06/2026 | Modificado por: Jacqueline Marifer Escobar Espinoza | Descripción: Agregar logAutocompletado() para registrar en log estados autocompletados por vigilante
+ */
+
 namespace App\Services;
 
 use App\Models\RegistroAcceso;

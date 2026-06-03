@@ -1,5 +1,21 @@
 <?php
 
+/**
+ * Empresa:     OMEGA Solutions
+ * Proyecto:    ProyectoC - Sistema de Gestión de Accesos y Visitas
+ * Archivo:     app/Http/Controllers/EventoController.php
+ * Creación:    28/05/2026
+ * Creado por:  Jacqueline Marifer Escobar Espinoza
+ * Aprobado por: Líder de Área
+ *
+ * Changelog:
+ * ID: 1 | Fecha: 28/05/2026 | Modificado por: Jacqueline Marifer Escobar Espinoza | Descripción: Creación inicial del módulo de eventos con QR grupal automático
+ * ID: 2 | Fecha: 31/05/2026 | Modificado por: Jacqueline Marifer Escobar Espinoza | Descripción: Implementar reenvío de QR al responsable
+ * ID: 3 | Fecha: 01/06/2026 | Modificado por: Jacqueline Marifer Escobar Espinoza | Descripción: Agregar tolerancia antes y después configurable (15 o 30 min)
+ * ID: 4 | Fecha: 02/06/2026 | Modificado por: Jacqueline Marifer Escobar Espinoza | Descripción: Fix castear tolerancia a int para Carbon subMinutes y addMinutes
+ * ID: 5 | Fecha: 02/06/2026 | Modificado por: Jacqueline Marifer Escobar Espinoza | Descripción: Validación de límite máximo de 1000 personas por evento
+ */
+
 namespace App\Http\Controllers;
 
 use App\Models\Evento;

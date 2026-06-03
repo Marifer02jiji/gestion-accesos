@@ -1,3 +1,15 @@
+{{--
+Empresa:     OMEGA Solutions
+Proyecto:    ProyectoC - Sistema de Gestión de Accesos y Visitas
+Archivo:     resources/views/solicitudes/historial.blade.php
+Creación:    31/05/2026
+Creado por:  Jacqueline Marifer Escobar Espinoza
+Aprobado por: Líder de Área
+
+Changelog:
+ID: 1 | Fecha: 31/05/2026 | Modificado por: Jacqueline Marifer Escobar Espinoza | Descripción: Creación inicial, historial de visitas finalizadas con tiempo total dentro de institución
+--}}
+
 <x-app-layout>
     <x-slot name="header">
         Historial de Visitas

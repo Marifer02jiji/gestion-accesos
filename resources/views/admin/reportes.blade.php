@@ -1,3 +1,18 @@
+{{--
+Empresa:     OMEGA Solutions
+Proyecto:    ProyectoC - Sistema de Gestión de Accesos y Visitas
+Archivo:     resources/views/admin/reportes.blade.php
+Creación:    19/03/2026
+Creado por:  Jacqueline Marifer Escobar Espinoza
+Aprobado por: Líder de Área
+
+Changelog:
+ID: 1 | Fecha: 19/03/2026 | Modificado por: Jacqueline Marifer Escobar Espinoza | Descripción: Creación inicial, dashboard de estadísticas con tarjetas de totales
+ID: 2 | Fecha: 19/05/2026 | Modificado por: Jacqueline Marifer Escobar Espinoza | Descripción: Agregar tabla de últimas solicitudes con badges de estado
+ID: 3 | Fecha: 31/05/2026 | Modificado por: Jacqueline Marifer Escobar Espinoza | Descripción: Agregar botones Reporte de Visitas y Ver Visitantes Activos
+ID: 4 | Fecha: 02/06/2026 | Modificado por: Jacqueline Marifer Escobar Espinoza | Descripción: Badges con colores para todos los estados incluyendo En Institución y Finalizada
+--}}
+
 <x-app-layout>
     <x-slot name="header">
         Reportes y Estadísticas

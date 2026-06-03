@@ -1,3 +1,16 @@
+{{--
+Empresa:     OMEGA Solutions
+Proyecto:    ProyectoC - Sistema de Gestión de Accesos y Visitas
+Archivo:     resources/views/admin/exclusiones.blade.php
+Creación:    07/05/2026
+Creado por:  Jacqueline Marifer Escobar Espinoza
+Aprobado por: Líder de Área
+
+Changelog:
+ID: 1 | Fecha: 07/05/2026 | Modificado por: Jacqueline Marifer Escobar Espinoza | Descripción: Creación inicial, lista de exclusión con CRUD de visitantes bloqueados
+ID: 2 | Fecha: 28/05/2026 | Modificado por: Jacqueline Marifer Escobar Espinoza | Descripción: Agregar filtros por nombre, correo, motivo y rango de fechas
+--}}
+
 <x-app-layout>
     <x-slot name="header">
         Lista de Exclusión

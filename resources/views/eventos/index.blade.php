@@ -1,3 +1,16 @@
+{{--
+Empresa:     OMEGA Solutions
+Proyecto:    ProyectoC - Sistema de Gestión de Accesos y Visitas
+Archivo:     resources/views/eventos/index.blade.php
+Creación:    28/05/2026
+Creado por:  Jacqueline Marifer Escobar Espinoza
+Aprobado por: Líder de Área
+
+Changelog:
+ID: 1 | Fecha: 28/05/2026 | Modificado por: Jacqueline Marifer Escobar Espinoza | Descripción: Creación inicial, lista de eventos del organizador
+ID: 2 | Fecha: 02/06/2026 | Modificado por: Jacqueline Marifer Escobar Espinoza | Descripción: Agregar columnas de Tipo, Responsable y correo; mostrar folio sin prefijo EVT-
+--}}
+
 <x-app-layout>
     <x-slot name="header">
         Eventos

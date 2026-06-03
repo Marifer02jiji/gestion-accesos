@@ -1,14 +1,17 @@
 <?php
 
 /**
- * Empresa: OMEGA
- * Proyecto: Sistema de Gestión de Accesos
+ * Empresa:     OMEGA Solutions
+ * Proyecto:    ProyectoC - Sistema de Gestión de Accesos y Visitas
+ * Archivo:     app/Models/Notificacion.php
  * Creación: 07/05/2026
- * Creado por: Desarrollador
+ * Creado por:  Jacqueline Marifer Escobar Espinoza
  * Aprobado por: Líder del Área
  *
  * Changelog:
- * ID: 1 | Fecha: 07/05/2026 | Modificado por: Desarrollador | Descripción: Creación inicial
+ * ID: 1 | Fecha: 07/05/2026 | Modificado por: Jacqueline Marifer Escobar Espinoza | Descripción: Creación inicial, modelo de notificación con tipos pendiente, autorizada, rechazada, entrada, salida, encuentro
+ * ID: 2 | Fecha: 01/06/2026 | Modificado por: Jacqueline Marifer Escobar Espinoza | Descripción: Agregar tipos tolerancia_vencida y cierre_institucion para scheduler
+ * ID: 3 | Fecha: 02/06/2026 | Modificado por: Jacqueline Marifer Escobar Espinoza | Descripción: Agregar notificación especial cuando vigilante registra salida sin estados intermedios del anfitrión
  */
 
 namespace App\Models;

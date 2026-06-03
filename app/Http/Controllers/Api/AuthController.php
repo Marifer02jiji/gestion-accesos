@@ -1,18 +1,17 @@
 <?php
 
 /**
- * Empresa: OMEGA
- * Proyecto: Sistema de Gestión de Accesos
- * Creación: 07/05/2026
- * Creado por: Desarrollador
+ * Empresa:     OMEGA Solutions
+ * Proyecto:    ProyectoC - Sistema de Gestión de Accesos y Visitas
+ * Archivo:     app/Http/Controllers/Api/AuthController.php
+ * Creación:    19/03/2026
+ * Creado por:  Jacqueline Marifer Escobar Espinoza
+ * Aprobado por: Líder de Área
  *
  * Changelog:
- * ID: 1 | Fecha: 07/05/2026 | Descripción: Creación inicial
- * ID: 2 | Fecha: 25/05/2026 | Descripción: Asignación automática de rol
- * ID: 3 | Fecha: 26/05/2026 | Descripción: Fix búsqueda usuario SAM con dominio
- * ID: 4 | Fecha: 27/05/2026 | Descripción: Ajuste nombres de departamentos autorizadores
- * ID: 5 | Fecha: 29/05/2026 | Descripción: Fix búsqueda por name — respeta roles manuales
- * ID: 6 | Fecha: 29/05/2026 | Descripción: Soporte para roles múltiples solicitante/autorizador
+ * ID: 1 | Fecha: 19/03/2026 | Modificado por: Jacqueline Marifer Escobar Espinoza | Descripción: Creación inicial, login API con validación SAM SHA-256 y token Sanctum
+ * ID: 2 | Fecha: 07/05/2026 | Modificado por: Jacqueline Marifer Escobar Espinoza | Descripción: Buscar usuario por name, retornar rol singular y notificaciones no leídas
+ * ID: 3 | Fecha: 19/05/2026 | Modificado por: Jacqueline Marifer Escobar Espinoza | Descripción: Fix solo asignar rol si isEmpty para no sobreescribir roles manuales
  */
 
 namespace App\Http\Controllers\Api;
@@ -194,6 +193,3 @@ class AuthController extends Controller
     }
 
 }
-
-
-

@@ -1,3 +1,15 @@
+{{--
+Empresa:     OMEGA Solutions
+Proyecto:    ProyectoC - Sistema de Gestión de Accesos y Visitas
+Archivo:     resources/views/eventos/show.blade.php
+Creación:    28/05/2026
+Creado por:  Jacqueline Marifer Escobar Espinoza
+Aprobado por: Líder de Área
+
+Changelog:
+ID: 1 | Fecha: 28/05/2026 | Modificado por: Jacqueline Marifer Escobar Espinoza | Descripción: Creación inicial, detalle del evento con QR generado y botón de reenvío
+--}}
+
 <x-app-layout>
     <x-slot name="header">
         Detalle de Evento

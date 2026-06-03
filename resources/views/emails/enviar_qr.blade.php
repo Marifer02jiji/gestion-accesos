@@ -1,3 +1,17 @@
+{{--
+Empresa:     OMEGA Solutions
+Proyecto:    ProyectoC - Sistema de Gestión de Accesos y Visitas
+Archivo:     resources/views/emails/enviar_qr.blade.php
+Creación:    07/05/2026
+Creado por:  Jacqueline Marifer Escobar Espinoza
+Aprobado por: Líder de Área
+
+Changelog:
+ID: 1 | Fecha: 07/05/2026 | Modificado por: Jacqueline Marifer Escobar Espinoza | Descripción: Creación inicial, plantilla de correo con QR adjunto para visitante
+ID: 2 | Fecha: 01/06/2026 | Modificado por: Jacqueline Marifer Escobar Espinoza | Descripción: Agregar nombre del anfitrión (solicitante) en el correo
+ID: 3 | Fecha: 02/06/2026 | Modificado por: Jacqueline Marifer Escobar Espinoza | Descripción: Formato de fechas legible con Carbon y código de validación sin color llamativo
+--}}
+
 <!DOCTYPE html>
 <html lang="es">
 <head>

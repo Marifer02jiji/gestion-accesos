@@ -1,5 +1,4 @@
 <?php
-
 /*
 |--------------------------------------------------------------------------
 | Matriz autorizador → solicitantes (usuario SAM, sin dominio)
@@ -9,12 +8,12 @@
 |
 | Nota: las solicitudes de "v" las autoriza hugo.rm, no mauro.
 */
-
 return [
     'matriz' => [
         'mauro' => [
             'hugo.rm',
             'imillanf',
+            'acentenob',
         ],
         'hugo.rm' => [
             'rcanor',

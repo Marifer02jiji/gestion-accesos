@@ -1,3 +1,17 @@
+{{--
+Empresa:     OMEGA Solutions
+Proyecto:    ProyectoC - Sistema de Gestión de Accesos y Visitas
+Archivo:     resources/views/admin/visitantes-activos.blade.php
+Creación:    19/05/2026
+Creado por:  Jacqueline Marifer Escobar Espinoza
+Aprobado por: Líder de Área
+
+Changelog:
+ID: 1 | Fecha: 19/05/2026 | Modificado por: Jacqueline Marifer Escobar Espinoza | Descripción: Creación inicial, tabla de visitantes actualmente dentro de la institución
+ID: 2 | Fecha: 28/05/2026 | Modificado por: Jacqueline Marifer Escobar Espinoza | Descripción: Agregar columna de anfitrión y tiempo en institución
+ID: 3 | Fecha: 31/05/2026 | Modificado por: Jacqueline Marifer Escobar Espinoza | Descripción: Salida forzada para visitantes con más de 10 horas dentro
+--}}
+
 <x-app-layout>
     <x-slot name="header">
         Visitantes Activos en Institución

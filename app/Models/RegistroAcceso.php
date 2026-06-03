@@ -1,5 +1,20 @@
 <?php
 
+/**
+ * Empresa:     OMEGA Solutions
+ * Proyecto:    ProyectoC - Sistema de Gestión de Accesos y Visitas
+ * Archivo:     app/Models/RegistroAcceso.php
+ * Creación:    19/03/2026
+ * Creado por:  Jacqueline Marifer Escobar Espinoza
+ * Aprobado por: Líder de Área
+ *
+ * Changelog:
+ * ID: 1 | Fecha: 19/03/2026 | Modificado por: Jacqueline Marifer Escobar Espinoza | Descripción: Creación inicial, modelo de registro de acceso con relación a QR
+ * ID: 2 | Fecha: 19/05/2026 | Modificado por: Jacqueline Marifer Escobar Espinoza | Descripción: Agregar métodos estáticos registrarEntradaInstitucional() y registrarSalidaInstitucional()
+ * ID: 3 | Fecha: 28/05/2026 | Modificado por: Jacqueline Marifer Escobar Espinoza | Descripción: Agregar columnas telefono_vigilante_entrada, caseta_entrada, telefono_vigilante_salida, caseta_salida al fillable
+ * ID: 4 | Fecha: 02/06/2026 | Modificado por: Jacqueline Marifer Escobar Espinoza | Descripción: Fix alinear columnas del fillable con las columnas reales insertadas por Flutter
+ */
+
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;

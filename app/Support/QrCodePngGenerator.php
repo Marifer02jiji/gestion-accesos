@@ -1,5 +1,17 @@
 <?php
 
+/**
+ * Empresa:     OMEGA Solutions
+ * Proyecto:    ProyectoC - Sistema de Gestión de Accesos y Visitas
+ * Archivo:     app/Support/QrCodePngGenerator.php
+ * Creación:    07/05/2026
+ * Creado por:  Jacqueline Marifer Escobar Espinoza
+ * Aprobado por: Líder de Área
+ *
+ * Changelog:
+ * ID: 1 | Fecha: 07/05/2026 | Modificado por: Jacqueline Marifer Escobar Espinoza | Descripción: Creación inicial, generador de imagen PNG del código QR para adjuntar en correos
+ */
+
 namespace App\Support;
 
 use RuntimeException;

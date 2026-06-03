@@ -1,14 +1,20 @@
 <?php
-// =============================================================================
-// Proyecto  : Sistema de Gestión de Accesos y Visitas
-// Archivo   : routes/api.php
-// Autor     : Omega Company
-// Fecha     : 2026-05-27
-// Versión   : 2.0.0
-// Cambio    : Rutas del vigilante son PÚBLICAS — no necesita Sanctum porque
-//             no existe como usuario en BD. Solicitante y autorizador
-//             sin ningún cambio.
-// =============================================================================
+
+/**
+ * Empresa:     OMEGA Solutions
+ * Proyecto:    ProyectoC - Sistema de Gestión de Accesos y Visitas
+ * Archivo:     routes/api.php
+ * Creación:    19/03/2026
+ * Creado por:  Jacqueline Marifer Escobar Espinoza
+ * Aprobado por: Líder de Área
+ *
+ * Changelog:
+ * ID: 1 | Fecha: 19/03/2026 | Modificado por: Jacqueline Marifer Escobar Espinoza | Descripción: Creación inicial, rutas API REST con Sanctum para solicitante y autorizador
+ * ID: 2 | Fecha: 07/05/2026 | Modificado por: Jacqueline Marifer Escobar Espinoza | Descripción: Rutas públicas de vigilante sin autenticación Sanctum
+ * ID: 3 | Fecha: 19/05/2026 | Modificado por: Jacqueline Marifer Escobar Espinoza | Descripción: Agregar rutas de notificaciones y visitas activas
+ * ID: 4 | Fecha: 28/05/2026 | Modificado por: Jacqueline Marifer Escobar Espinoza | Descripción: Agregar rutas confirmarLlegada y confirmarSalida de encuentro
+ * ID: 5 | Fecha: 02/06/2026 | Modificado por: Jacqueline Marifer Escobar Espinoza | Descripción: Agregar ruta de cancelación con correo al visitante
+ */
 
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\NotificacionApiController;

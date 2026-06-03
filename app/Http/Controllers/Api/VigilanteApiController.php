@@ -1,11 +1,22 @@
 <?php
 
-// =============================================================================
-// Proyecto  : Sistema de Gestión de Accesos y Visitas
-// Archivo   : VigilanteApiController.php
-// Versión   : 3.3.0
-// Descripción: Registro de acceso — columnas telefono_vigilante_entrada / caseta_entrada
-// =============================================================================
+/**
+ * Empresa:     OMEGA Solutions
+ * Proyecto:    ProyectoC - Sistema de Gestión de Accesos y Visitas
+ * Archivo:     app/Http/Controllers/Api/VigilanteApiController.php
+ * Creación:    19/03/2026
+ * Creado por:  Jacqueline Marifer Escobar Espinoza
+ * Aprobado por: Líder de Área
+ *
+ * Changelog:
+ * ID: 1 | Fecha: 19/03/2026 | Modificado por: Jacqueline Marifer Escobar Espinoza | Descripción: Creación inicial, login de vigilante por teléfono y área sin Sanctum
+ * ID: 2 | Fecha: 07/05/2026 | Modificado por: Jacqueline Marifer Escobar Espinoza | Descripción: Implementar escanear() con detección automática entrada/salida por QR
+ * ID: 3 | Fecha: 19/05/2026 | Modificado por: Jacqueline Marifer Escobar Espinoza | Descripción: Agregar registrarEntrada() y registrarSalida() como endpoints independientes
+ * ID: 4 | Fecha: 28/05/2026 | Modificado por: Jacqueline Marifer Escobar Espinoza | Descripción: Agregar soporte para QR de eventos (escanearEvento())
+ * ID: 5 | Fecha: 31/05/2026 | Modificado por: Jacqueline Marifer Escobar Espinoza | Descripción: Implementar visitasHoy() y eventosActivos() para panel del vigilante
+ * ID: 6 | Fecha: 01/06/2026 | Modificado por: Jacqueline Marifer Escobar Espinoza | Descripción: Notificación especial si anfitrión no marcó estados intermedios al registrar salida
+ * ID: 7 | Fecha: 02/06/2026 | Modificado por: Jacqueline Marifer Escobar Espinoza | Descripción: Fix columnas telefono_vigilante_entrada y caseta_entrada alineadas con modelo Flutter
+ */
 
 namespace App\Http\Controllers\Api;
 

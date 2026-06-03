@@ -1,9 +1,7 @@
 <?php
+
 namespace App\Http\Controllers\Api;
 
-<<<<<<< HEAD
-namespace App\Http\Controllers\Api;
-=======
 /**
  * Empresa:     OMEGA Solutions
  * Proyecto:    ProyectoC - Sistema de Gestión de Accesos y Visitas
@@ -23,7 +21,6 @@ namespace App\Http\Controllers\Api;
  *
  * Descripción: API REST para la gestión móvil de solicitudes, permitiendo a los usuarios anfitriones y autorizadores operar desde la aplicación Flutter.
  */
->>>>>>> 90156fc (cambios de evt a vis)
 
 use App\Http\Controllers\Controller;
 use App\Rules\AnticipacionMinimaVisita;
@@ -35,10 +32,7 @@ use App\Models\Visitante;
 use App\Mail\EnviarQRMail;
 use App\Services\AutorizacionVisitaService;
 use App\Services\FlujoAccesoService;
-<<<<<<< HEAD
-=======
 use App\Services\ListaExclusionVisitaService;
->>>>>>> 90156fc (cambios de evt a vis)
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -48,12 +42,8 @@ use Illuminate\Support\Facades\Mail;
 class SolicitudApiController extends Controller
 {
     public function __construct(
-<<<<<<< HEAD
-        private readonly AutorizacionVisitaService $autorizacionVisita
-=======
         private readonly AutorizacionVisitaService $autorizacionVisita,
         private readonly ListaExclusionVisitaService $listaExclusion,
->>>>>>> 90156fc (cambios de evt a vis)
     ) {
     }
 
@@ -485,7 +475,6 @@ class SolicitudApiController extends Controller
             return response()->json(['message' => 'Los minutos extra deben ser mayores a cero.', 'data' => null], 422);
         }
 
-<<<<<<< HEAD
         $extendidos = 0;
         foreach ($solicitud->solicitudVisitantes as $sv) {
             if ($sv->qr && in_array($sv->qr->id_estadoQr, [1, 2])) {
@@ -498,7 +487,6 @@ class SolicitudApiController extends Controller
         }
 
         return response()->json(['message' => "QR extendido {$minutos} minutos para {$extendidos} visitante(s).", 'data' => ['minutos_extra' => $minutos, 'extendidos' => $extendidos]]);
-=======
         try {
             $minutos = SolicitudExtensionTiempoService::normalizarMinutosExtra(
                 (int) $request->input(
@@ -538,7 +526,6 @@ class SolicitudApiController extends Controller
         } catch (\InvalidArgumentException $e) {
             return response()->json(['message' => $e->getMessage(), 'data' => null], 422);
         }
->>>>>>> 90156fc (cambios de evt a vis)
     }
 
     public function activas(Request $request)

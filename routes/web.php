@@ -1,5 +1,22 @@
 <?php
 
+/**
+ * Empresa:     OMEGA Solutions
+ * Proyecto:    ProyectoC - Sistema de Gestión de Accesos y Visitas
+ * Archivo:     routes/web.php
+ * Creación:    19/03/2026
+ * Creado por:  Jacqueline Marifer Escobar Espinoza
+ * Aprobado por: Líder de Área
+ *
+ * Changelog:
+ * ID: 1 | Fecha: 19/03/2026 | Modificado por: Jacqueline Marifer Escobar Espinoza | Descripción: Creación inicial, rutas web para solicitante, autorizador, vigilante y administrador
+ * ID: 2 | Fecha: 07/05/2026 | Modificado por: Jacqueline Marifer Escobar Espinoza | Descripción: Agregar rutas de notificaciones y perfil
+ * ID: 3 | Fecha: 28/05/2026 | Modificado por: Jacqueline Marifer Escobar Espinoza | Descripción: Agregar rutas del módulo de eventos para rol organizador
+ * ID: 4 | Fecha: 31/05/2026 | Modificado por: Jacqueline Marifer Escobar Espinoza | Descripción: Fix mover ruta historial antes del Route::resource para evitar conflicto con id
+ * ID: 5 | Fecha: 01/06/2026 | Modificado por: Jacqueline Marifer Escobar Espinoza | Descripción: Agregar rutas eliminar notificación individual y todas
+ * ID: 6 | Fecha: 02/06/2026 | Modificado por: Jacqueline Marifer Escobar Espinoza | Descripción: Agregar ruta /recuperar-contrasena para reset automático de contraseña
+ */
+
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\SolicitudController;
 use App\Http\Controllers\AutorizadorController;

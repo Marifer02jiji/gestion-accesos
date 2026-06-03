@@ -1,3 +1,20 @@
+{{--
+Empresa:     OMEGA Solutions
+Proyecto:    ProyectoC - Sistema de Gestión de Accesos y Visitas
+Archivo:     resources/views/solicitudes/index.blade.php
+Creación:    19/03/2026
+Creado por:  Jacqueline Marifer Escobar Espinoza
+Aprobado por: Líder de Área
+
+Changelog:
+ID: 1 | Fecha: 19/03/2026 | Modificado por: Jacqueline Marifer Escobar Espinoza | Descripción: Creación inicial, tabla de solicitudes del solicitante
+ID: 2 | Fecha: 07/05/2026 | Modificado por: Jacqueline Marifer Escobar Espinoza | Descripción: Agregar badges de estado con colores por estado
+ID: 3 | Fecha: 28/05/2026 | Modificado por: Jacqueline Marifer Escobar Espinoza | Descripción: Botones dinámicos de Llegada y Salida de Encuentro en color verde
+ID: 4 | Fecha: 31/05/2026 | Modificado por: Jacqueline Marifer Escobar Espinoza | Descripción: Agregar etiqueta Expirada para solicitudes con fecha pasada
+ID: 5 | Fecha: 02/06/2026 | Modificado por: Jacqueline Marifer Escobar Espinoza | Descripción: Agregar filtros por estado y rango de fechas
+ID: 6 | Fecha: 02/06/2026 | Modificado por: Jacqueline Marifer Escobar Espinoza | Descripción: Ordenar activas primero, finalizadas y canceladas al fondo
+--}}
+
 <x-app-layout>
     <x-slot name="header">
         Mis Solicitudes

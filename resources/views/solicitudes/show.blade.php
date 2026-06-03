@@ -1,3 +1,19 @@
+{{--
+Empresa:     OMEGA Solutions
+Proyecto:    ProyectoC - Sistema de Gestión de Accesos y Visitas
+Archivo:     resources/views/solicitudes/show.blade.php
+Creación:    19/03/2026
+Creado por:  Jacqueline Marifer Escobar Espinoza
+Aprobado por: Líder de Área
+
+Changelog:
+ID: 1 | Fecha: 19/03/2026 | Modificado por: Jacqueline Marifer Escobar Espinoza | Descripción: Creación inicial, detalle de solicitud con tabla de visitantes
+ID: 2 | Fecha: 07/05/2026 | Modificado por: Jacqueline Marifer Escobar Espinoza | Descripción: Agregar botón Enviar QR al Visitante para solicitudes autorizadas
+ID: 3 | Fecha: 28/05/2026 | Modificado por: Jacqueline Marifer Escobar Espinoza | Descripción: Botones dinámicos de encuentro según estado actual de la visita
+ID: 4 | Fecha: 01/06/2026 | Modificado por: Jacqueline Marifer Escobar Espinoza | Descripción: Botón Cancelar Solicitud disponible para estados Pendiente y Autorizada
+ID: 5 | Fecha: 02/06/2026 | Modificado por: Jacqueline Marifer Escobar Espinoza | Descripción: Botones de encuentro en color verde institucional
+--}}
+
 <x-app-layout>
     <x-slot name="header">
         Detalle de Solicitud

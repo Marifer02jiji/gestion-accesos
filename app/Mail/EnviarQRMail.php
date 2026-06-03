@@ -1,5 +1,19 @@
 <?php
 
+/**
+ * Empresa:     OMEGA Solutions
+ * Proyecto:    ProyectoC - Sistema de Gestión de Accesos y Visitas
+ * Archivo:     app/Mail/EnviarQRMail.php
+ * Creación:    07/05/2026
+ * Creado por:  Jacqueline Marifer Escobar Espinoza
+ * Aprobado por: Líder de Área
+ *
+ * Changelog:
+ * ID: 1 | Fecha: 07/05/2026 | Modificado por: Jacqueline Marifer Escobar Espinoza | Descripción: Creación inicial, envío de QR adjunto como PNG al visitante
+ * ID: 2 | Fecha: 28/05/2026 | Modificado por: Jacqueline Marifer Escobar Espinoza | Descripción: Detectar si QR es de evento o solicitud normal, usar vista diferente
+ * ID: 3 | Fecha: 01/06/2026 | Modificado por: Jacqueline Marifer Escobar Espinoza | Descripción: Agregar datos del anfitrión (solicitante) en correo de visita normal
+ */
+
 namespace App\Mail;
 
 use App\Models\QR;

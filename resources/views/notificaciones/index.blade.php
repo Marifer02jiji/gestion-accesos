@@ -1,3 +1,18 @@
+{{--
+Empresa:     OMEGA Solutions
+Proyecto:    ProyectoC - Sistema de Gestión de Accesos y Visitas
+Archivo:     resources/views/notificaciones/index.blade.php
+Creación:    07/05/2026
+Creado por:  Jacqueline Marifer Escobar Espinoza
+Aprobado por: Líder de Área
+
+Changelog:
+ID: 1 | Fecha: 07/05/2026 | Modificado por: Jacqueline Marifer Escobar Espinoza | Descripción: Creación inicial, lista de notificaciones con íconos por tipo
+ID: 2 | Fecha: 19/05/2026 | Modificado por: Jacqueline Marifer Escobar Espinoza | Descripción: Implementar marcar leída individual y marcar todas leídas
+ID: 3 | Fecha: 01/06/2026 | Modificado por: Jacqueline Marifer Escobar Espinoza | Descripción: Agregar botones eliminar individual y eliminar todas
+ID: 4 | Fecha: 02/06/2026 | Modificado por: Jacqueline Marifer Escobar Espinoza | Descripción: Links a solicitudes según tipo de notificación con lógica por rol
+--}}
+
 <x-app-layout>
     <x-slot name="header">
         Notificaciones
