@@ -275,6 +275,13 @@ class SolicitudApiController extends Controller
             'visitantes.*.correo'    => 'required|email|max:150',
         ]);
 
+        if ($bloqueo = $this->listaExclusion->respuesta422SiExcluidos(
+            $request->visitantes,
+            'No se puede crear la solicitud. Los siguientes visitantes estan en lista de exclusion: %s'
+        )) {
+            return $bloqueo;
+        }
+
         $solicitud = Solicitud::create([
             'folio'               => Solicitud::generarFolio(),
             'fecha_inicio'        => $request->fecha_inicio,
@@ -289,8 +296,9 @@ class SolicitudApiController extends Controller
         ]);
 
         foreach ($request->visitantes as $v) {
+            $correoNorm = strtolower(trim((string) $v['correo']));
             $visitante = Visitante::updateOrCreate(
-                ['correo_personal' => $v['correo']],
+                ['correo_personal' => $correoNorm],
                 [
                     'nombre'    => trim($v['nombre']),
                     'apellidos' => trim($v['apellidos']),
