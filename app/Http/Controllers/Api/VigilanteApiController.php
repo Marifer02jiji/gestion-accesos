@@ -24,6 +24,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Validator;
+use Carbon\Carbon;
 
 class VigilanteApiController extends Controller
 {
@@ -279,10 +280,9 @@ class VigilanteApiController extends Controller
 
         // Solo validar vigencia si va a ENTRAR
         if ($accionDisponible === 'entrada') {
-            if (now()->lt($qr->vigencia_inicio) || now()->gt($qr->vigencia_final)) {
-                return response()->json([
-                    'data' => $this->respuestaRechazo($qr, 'El QR ha expirado o aun no es valido.')
-                ], 200);
+            $rechazoVigencia = $this->rechazoSiFueraDeVigencia($qr);
+            if ($rechazoVigencia !== null) {
+                return response()->json(['data' => $rechazoVigencia], 200);
             }
         }
 
@@ -774,14 +774,49 @@ class VigilanteApiController extends Controller
         ], 200);
     }
 
-    private function respuestaRechazoEvento(QR $qr, Evento $evento, string $motivo): array
+    private function rechazoSiFueraDeVigencia(QR $qr): ?array
     {
+        $ahora  = now();
+        $inicio = Carbon::parse($qr->vigencia_inicio);
+        $fin    = Carbon::parse($qr->vigencia_final);
+        $evento = Evento::where('id_qr', $qr->id_qr)->first();
+        $esEvento = $evento !== null;
+
+        if ($ahora->lt($inicio)) {
+            $fmt = $inicio->format('d/m/Y H:i');
+            $motivo = $esEvento
+                ? "El ingreso al evento aún no está permitido. La ventana de acceso inicia a las {$fmt} hrs."
+                : "El acceso aún no está permitido. La ventana de visita inicia a las {$fmt} hrs.";
+
+            return $this->respuestaRechazo($qr, $motivo, 'ANTES_VENTANA');
+        }
+
+        if ($ahora->gt($fin)) {
+            $fmt = $fin->format('d/m/Y H:i');
+            $motivo = $esEvento
+                ? "La ventana de acceso del evento ha finalizado. Terminó a las {$fmt} hrs."
+                : "El tiempo de visita ha expirado. La ventana terminó a las {$fmt} hrs.";
+
+            return $this->respuestaRechazo($qr, $motivo, 'DESPUES_VENTANA');
+        }
+
+        return null;
+    }
+
+    private function respuestaRechazoEvento(
+        QR $qr,
+        Evento $evento,
+        string $motivo,
+        ?string $codigoRechazo = null,
+    ): array {
         return [
             'tipo_acceso'       => 'evento',
             'id_qr'             => $qr->id_qr,
             'acceso_concedido'  => false,
             'accion_disponible' => 'entrada',
             'motivo_rechazo'    => $motivo,
+            'codigo_rechazo'    => $codigoRechazo,
+            'puede_solicitar_extension' => false,
             'evento'            => [
                 'folio'              => $evento->folio,
                 'tipo_evento'        => $evento->tipo_evento,
@@ -803,7 +838,7 @@ class VigilanteApiController extends Controller
         ];
     }
 
-    private function respuestaRechazo(?QR $qr, string $motivo): array
+    private function respuestaRechazo(?QR $qr, string $motivo, ?string $codigoRechazo = null): array
     {
         $visitante = $qr?->solicitudVisitante?->visitante;
         $solicitud = $qr?->solicitudVisitante?->solicitud;
@@ -811,7 +846,7 @@ class VigilanteApiController extends Controller
         if ($qr && !$qr->solicitudVisitante) {
             $evento = Evento::where('id_qr', $qr->id_qr)->first();
             if ($evento) {
-                return $this->respuestaRechazoEvento($qr, $evento, $motivo);
+                return $this->respuestaRechazoEvento($qr, $evento, $motivo, $codigoRechazo);
             }
         }
 
@@ -821,6 +856,8 @@ class VigilanteApiController extends Controller
             'acceso_concedido'  => false,
             'accion_disponible' => 'entrada',
             'motivo_rechazo'    => $motivo,
+            'codigo_rechazo'    => $codigoRechazo,
+            'puede_solicitar_extension' => $codigoRechazo === 'DESPUES_VENTANA',
             'visitante'         => [
                 'nombre'          => $visitante?->nombre ?? '',
                 'apellidos'       => $visitante?->apellidos ?? '',

@@ -58,9 +58,18 @@ class VigilanteController extends Controller
                 ->with('error', 'Este código QR fue cancelado.');
         }
 
-        if (now() < $qr->vigencia_inicio || now() > $qr->vigencia_final) {
+        if (now()->lt($qr->vigencia_inicio)) {
+            $inicio = \Carbon\Carbon::parse($qr->vigencia_inicio)->format('d/m/Y H:i');
+
             return redirect()->route('vigilante.index')
-                ->with('error', 'El código QR ha expirado o aún no es válido.');
+                ->with('error', "El acceso aún no está permitido. La ventana inicia a las {$inicio} hrs.");
+        }
+
+        if (now()->gt($qr->vigencia_final)) {
+            $fin = \Carbon\Carbon::parse($qr->vigencia_final)->format('d/m/Y H:i');
+
+            return redirect()->route('vigilante.index')
+                ->with('error', "El tiempo de acceso ha expirado. La ventana terminó a las {$fin} hrs.");
         }
 
         // Verificar si el visitante está en la lista de exclusión
